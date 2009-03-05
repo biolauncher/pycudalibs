@@ -1,0 +1,5 @@
+Simple but powerful interface to CUDA libraries: cublas, cufft
+etc. Ligthweight abstractions of CUDA memory can be passed around,
+resued, initialised and actualised in a number of forms, Especially
+numpy arrays and matrices.
+
