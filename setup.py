@@ -18,14 +18,14 @@ cublas = Extension('_cublas',
                    library_dirs = [cudalib],
                    sources = ['pycublas.c'])
 
-cuda = Extension('_cuda',
-                 define_macros = [('MAJOR_VERSION', '0'),
-                                  ('MINOR_VERSION', '1'),
-                                  ('DEBUG', '1')],
-                 include_dirs = ['.', cudainclude],
-                 libraries = ['cublas'],
-                 library_dirs = [cudalib],
-                 sources = ['pycuda.c'])
+cudamem = Extension('_cudamem',
+                    define_macros = [('MAJOR_VERSION', '0'),
+                                     ('MINOR_VERSION', '1'),
+                                     ('DEBUG', '1')],
+                    include_dirs = ['.', cudainclude],
+                    libraries = ['cublas'],
+                    library_dirs = [cudalib],
+                    sources = ['pycudamem.c'])
 
 
 setup (name = 'CUDA Libraries',
@@ -37,4 +37,4 @@ setup (name = 'CUDA Libraries',
        long_description = '''
 APIs for CUDA libraries with support for numpy arrays. Unreleased! Caveat Emptor!
 ''',
-       ext_modules = [cuda, cublas])
+       ext_modules = [cudamem, cublas])

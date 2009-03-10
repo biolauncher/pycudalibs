@@ -20,7 +20,7 @@ typedef struct {
 } cuda_DeviceMemory;
 
 
-/* Lookup of cublas error since we use CUBLAS routines in _cuda module for allocation */
+/* Lookup of cublas error since we use CUBLAS routines in _cudamem module for allocation */
 
 static char* cublas_error_text [] = {
   "CUBLAS library not initialized",

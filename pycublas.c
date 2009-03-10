@@ -14,7 +14,7 @@ static PyMethodDef _cublas_methods[] = {
   {"sgemm", sgemm, METH_VARARGS,
    "Single Pecision BLAS3: C = alpha * op(A) * op(B) + beta * C"},
   {"close", shutdown, METH_VARARGS,
-   "Releases CPU‐side resources used by the CUBLAS library. The release of GPU‐side resources may be deferred until the application shuts down."}, 
+   "Releases CPU‐side resources used by the CUBLAS library."},
   {NULL, NULL, 0, NULL}
 };
 
