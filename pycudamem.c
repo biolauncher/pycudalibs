@@ -1,5 +1,7 @@
 /* copyright (C) 2009 Simon Beaumont - All Rights Reserved */
 
+#define CUDAMEM_MODULE
+
 #include <pycudamem.h>
 #include <structmember.h>
 #include <stdio.h>
@@ -10,9 +12,9 @@ static PyObject* cuda_exception;
 // TODO - migrate this to pure cuda?
 
 static inline int cuda_error(int status, char* where) {
-#if DEBUG > 0
-  fprintf(stderr, "CUDACALL %s: status = %d\n", where, status);
-#endif
+
+  trace("CUDACALL %s: status = %d\n", where, status);
+
   if (status == CUBLAS_STATUS_SUCCESS) {
     return 0;
 
@@ -47,9 +49,8 @@ cuda_DeviceMemory_dealloc(cuda_DeviceMemory* self) {
     Py_DECREF(self->my_callback);
   } */
 
-#if DEBUG > 0
-  fprintf(stderr, "TRACE DeviceMemory_dealloc: %0x (%0x)\n", (int) self, (int) self->d_ptr);
-#endif
+  trace("TRACE DeviceMemory_dealloc: %0x (%0x)\n", (int) self, (int) self->d_ptr);
+
   if (self->d_ptr != NULL)  {
     if (cuda_error(cublasFree(self->d_ptr), "dealloc:cublasFree"))
       return;
@@ -77,21 +78,18 @@ cuda_DeviceMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 static int
 cuda_DeviceMemory_init(cuda_DeviceMemory *self, PyObject *args, PyObject *kwds) {
 
-  static char *kwlist[] = {"elements", "element_size", NULL};
-
-  if (! PyArg_ParseTupleAndKeywords(args, kwds, "|ii", kwlist, 
-                                    &self->e_num,
-                                    &self->e_size))
+  if (! PyArg_ParseTuple(args, "ii", &self->e_num, &self->e_size))
     return -1; 
   
-  else if (self->d_ptr != NULL && cuda_error(cublasFree(self->d_ptr), "init:cublasFree"))
+  trace("elements: %d element_size: %d\n", self->e_num, self->e_size);
+    
+  if (self->d_ptr != NULL && cuda_error(cublasFree(self->d_ptr), "init:cublasFree"))
     return -1;
   
-  else if (cuda_error(cublasAlloc(self->e_num, self->e_size, (void**)&self->d_ptr), "init:cublasAlloc"))
+  if (cuda_error(cublasAlloc(self->e_num, self->e_size, (void**)&self->d_ptr), "init:cublasAlloc"))
     return -1;
   
-  else
-    return 0;
+  return 0;
 }
 
 /* pretty print etc. */
@@ -195,6 +193,7 @@ cuda_DeviceMemory_setVector(cuda_DeviceMemory *self, PyObject *args) {
 }
 
 
+
 /***************
  * method table
  **************/
@@ -263,14 +262,13 @@ static PyTypeObject cuda_DeviceMemoryType = {
 #define PyMODINIT_FUNC void
 #endif
 PyMODINIT_FUNC
-init_cudamem(void) 
-{
+init_cudamem(void) {
     PyObject* module;
 
     if (PyType_Ready(&cuda_DeviceMemoryType) < 0)
         return;
 
-    module = Py_InitModule3("_cudamem", module_methods,"CUDA device memory utility module.");
+    module = Py_InitModule3("_cudamem", module_methods, "CUDA device memory utility module.");
 
     if (module == NULL) return;
     

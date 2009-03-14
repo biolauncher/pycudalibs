@@ -5,9 +5,11 @@
 from distutils.core import setup, Extension
 
 # todo figure how to set these portably!
-numpyinclude =  '/usr/local/src/sage-3.1.1-f/local/Frameworks/Python.framework/Versions/2.5/lib/python2.5/site-packages/numpy/core/include'
+numpyinclude =  '/Applications/sage/local/lib/python2.5/site-packages/numpy/core/include/numpy'
 cudainclude = '/usr/local/cuda/include'
 cudalib = '/usr/local/cuda/lib'
+
+# extension modules
 
 cublas = Extension('_cublas',
                    define_macros = [('MAJOR_VERSION', '0'),
@@ -27,6 +29,15 @@ cudamem = Extension('_cudamem',
                     library_dirs = [cudalib],
                     sources = ['pycudamem.c'])
 
+cunumpy = Extension('_cunumpy',
+                    define_macros = [('MAJOR_VERSION', '0'),
+                                      ('MINOR_VERSION', '1'),
+                                      ('DEBUG', '1')],
+                     include_dirs = ['.', cudainclude, numpyinclude],
+                     libraries = ['cublas'],
+                     library_dirs = [cudalib],
+                     sources = ['pycunumpy.c'])
+
 
 setup (name = 'CUDA Libraries',
        version = '0.1',
@@ -37,4 +48,4 @@ setup (name = 'CUDA Libraries',
        long_description = '''
 APIs for CUDA libraries with support for numpy arrays. Unreleased! Caveat Emptor!
 ''',
-       ext_modules = [cudamem, cublas])
+       ext_modules = [cudamem, cublas, cunumpy])

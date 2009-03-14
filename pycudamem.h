@@ -5,10 +5,15 @@
 #if defined(_PYCUDA_H)
 #else
 #define _PYCUDA_H 1
-#include <cublas.h>
 #include <Python.h>
+#include <cublas.h>
 
-/* CUDA utilities */
+#if DEBUG > 0
+#include <stdio.h>
+#define trace(format, ...) fprintf(stderr, format, ## __VA_ARGS__)
+#else
+#define trace(format, ...)
+#endif
 
 /* A python base class to encapsulate CUDA device memory. */
 
@@ -19,6 +24,9 @@ typedef struct {
   int e_num;
 } cuda_DeviceMemory;
 
+#define FLOAT32_BYTES 4
+
+#if defined(CUDAMEM_MODULE)
 
 /* Lookup of cublas error since we use CUBLAS routines in _cudamem module for allocation */
 
@@ -51,6 +59,23 @@ static inline char* get_cublas_error_text(cublasStatus sts) {
       return "unknown cublas error!";
   }
 }
+#else
+
+/* client code */
+static PyTypeObject *cudamem_DeviceMemoryType;
+ 
+static inline int import_cudamem(void) {
+  PyObject *module = PyImport_ImportModule("_cudamem");
+  
+  if (module != NULL) {
+    cudamem_DeviceMemoryType = (PyTypeObject *)PyObject_GetAttrString(module, "DeviceMemory");
+    if (cudamem_DeviceMemoryType == NULL) return -1;
+
+  } 
+  return 0;
+}
+
+#endif /* client code */
 
 #endif
 
