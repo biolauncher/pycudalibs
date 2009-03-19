@@ -1,4 +1,4 @@
-/* copyright (c) 2009 Simon Beaumont - All Rights Reserved */
+/* Copyright (c) 2009 Simon Beaumont - All Rights Reserved */
 
 #if defined(_PYCUBLAS_H)
 #else

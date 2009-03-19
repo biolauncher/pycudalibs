@@ -1,5 +1,25 @@
 Simple but powerful interface to CUDA libraries: cublas, cufft
-etc. Ligthweight abstractions of CUDA memory can be passed around,
-resued, initialised and actualised in a number of forms, Especially
-numpy arrays and matrices.
+etc. Light weight abstractions of CUDA memory can be passed around,
+resued, initialised and actualised in python. And can be cast into
+all CUDA compatible routines.
 
+Numpy arrays are the main foucs sources and destinations for these
+being actualised (loaded and stored) and a factory for CUDA device
+memory objects is provided to transform numpy arrays and vice a
+versa. This lowers the impedance between libraries and algorithms.
+
+Since these objects can be used directly by cudaBLAS libraries whole
+algorithms may be created in python that do not inccur host to device
+and device to host copy operation overheads until final results are
+required in python (numpy) memory.
+
+It is hoped that this will encourage further algorithm development.
+
+So far single precision real vectors and matrices are supported -
+single complex coming soon.
+
+Test harness under construction.
+________
+
+(C) Copyright 2009 Simon Beaumont - All Rights Reserved. RESEARCH USE ONLY
+Will be released under GPL3 in due course.

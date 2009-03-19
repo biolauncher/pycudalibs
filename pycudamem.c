@@ -1,7 +1,6 @@
 /* copyright (C) 2009 Simon Beaumont - All Rights Reserved */
 
 #define CUDAMEM_MODULE
-
 #include <pycudamem.h>
 #include <structmember.h>
 #include <stdio.h>
@@ -49,7 +48,7 @@ cuda_DeviceMemory_dealloc(cuda_DeviceMemory* self) {
     Py_DECREF(self->my_callback);
   } */
 
-  trace("TRACE DeviceMemory_dealloc: %0x (%0x)\n", (int) self, (int) self->d_ptr);
+  trace("TRACE cuda_DeviceMemory_dealloc: %0x (%0x)\n", (int) self, (int) self->d_ptr);
 
   if (self->d_ptr != NULL)  {
     if (cuda_error(cublasFree(self->d_ptr), "dealloc:cublasFree"))
@@ -69,7 +68,10 @@ cuda_DeviceMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
   if (self != NULL) {
     self->d_ptr = NULL;
     self->e_size = 0;
-    self->e_num = 0;
+    self->a_ndims = 0;
+    self->a_dims[0] = 0;
+    self->a_dims[1] = 0;
+    self->a_flags = 0; // REAL SINGLE precision default
   }
   
   return (PyObject *)self;
@@ -78,15 +80,17 @@ cuda_DeviceMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 static int
 cuda_DeviceMemory_init(cuda_DeviceMemory *self, PyObject *args, PyObject *kwds) {
 
-  if (! PyArg_ParseTuple(args, "ii", &self->e_num, &self->e_size))
+  if (! PyArg_ParseTuple(args, "iiii", &self->a_ndims, &self->a_dims[0], &self->a_dims[1], &self->e_size))
     return -1; 
-  
-  trace("elements: %d element_size: %d\n", self->e_num, self->e_size);
+
+  int n_elements = a_elements(self);
+
+  trace("TRACE cuda_DeviceMemory_init: elements: %d element_size: %d\n", n_elements, self->e_size);
     
   if (self->d_ptr != NULL && cuda_error(cublasFree(self->d_ptr), "init:cublasFree"))
     return -1;
   
-  if (cuda_error(cublasAlloc(self->e_num, self->e_size, (void**)&self->d_ptr), "init:cublasAlloc"))
+  if (cuda_error(cublasAlloc(n_elements, self->e_size, (void**)&self->d_ptr), "init:cublasAlloc"))
     return -1;
   
   return 0;
@@ -96,11 +100,15 @@ cuda_DeviceMemory_init(cuda_DeviceMemory *self, PyObject *args, PyObject *kwds) 
 
 static inline PyObject *
 _stringify(cuda_DeviceMemory *self) {
-  return PyString_FromFormat("<%s (0x%0x: %d x %d) @0x%0x>",
+  return PyString_FromFormat("<%s (0x%0x: %d X %d  %s %s (%d) %s) @0x%0x>",
                              self->ob_type->tp_name,
                              (int)self->d_ptr,
-                             self->e_num,
+                             self->a_dims[0],
+                             self->a_dims[1],
+                             (self->a_flags & COMPLEX_TYPE) ? "complex" : "real",
+                             (self->a_flags & DOUBLE_TYPE) ? "double" : "single",
                              self->e_size,
+                             (self->a_ndims == 2) ? "matrix" : (self->a_ndims == 1 ? "vector" : "scalar"),
                              (int)self);
 }
 
@@ -119,10 +127,15 @@ cuda_DeviceMemory_str(cuda_DeviceMemory *self) {
    TODO some nice class constants for double and float sizes */
 
 PyMemberDef cuda_DeviceMemory_members[] = {
-    {"elements", T_INT, offsetof(cuda_DeviceMemory, e_num), READONLY,
-     "number of elements"},
+  /*
+    {"m", T_INT, offsetof(cuda_DeviceMemory, e_num), READONLY,
+     "number of rows"},
+
+    {"n", T_INT, offsetof(cuda_DeviceMemory, e_num), READONLY,
+     "number of columns"},
     {"element_size", T_INT, offsetof(cuda_DeviceMemory, e_size), READONLY,
      "size of each element"},
+  */
     {NULL}
 };
 
@@ -199,10 +212,12 @@ cuda_DeviceMemory_setVector(cuda_DeviceMemory *self, PyObject *args) {
  **************/
 
 static PyMethodDef cuda_DeviceMemory_methods[] = {
+  /*
   {"storeVector", (PyCFunction) cuda_DeviceMemory_getVector, METH_VARARGS,
    "Store DeviceMemory into host memory."},
   {"loadVector", (PyCFunction) cuda_DeviceMemory_setVector, METH_VARARGS,
    "Load host memory into DeviceMemory."},
+  */
   {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 

@@ -15,16 +15,32 @@
 #define trace(format, ...)
 #endif
 
-/* A python base class to encapsulate CUDA device memory. */
+/* A python base class to encapsulate CUDA device memory. Fortran array semantics apply.  */
+
+#define DEVICE_MEMORY_MAXDIMS 2 
+#define FLOAT32_BYTES 4
+#define FLOAT64_BYTES 8
+#define COMPLEX32_BYTES 8
+#define COMPLEX64_BYTES 16
+
+#define COMPLEX_TYPE 1
+#define DOUBLE_TYPE 2
 
 typedef struct {
   PyObject_HEAD
-  void* d_ptr; // don't even think about de-referencing this!
-  int e_size;
-  int e_num;
+  void* d_ptr;                       /* opaque device pointer */
+  int a_type;                        /* type of elements */
+  int a_ndims;                       /* number of dimensions */
+  int a_dims[DEVICE_MEMORY_MAXDIMS]; /* dimensions */
+  int e_size;                        /* sizeof element */
+  int a_flags;
 } cuda_DeviceMemory;
 
-#define FLOAT32_BYTES 4
+/* return number of elements: matrix, vector or scalar */
+
+static inline int a_elements(cuda_DeviceMemory* d) {
+  return (d->a_ndims == 2) ? (d->a_dims[0] * d->a_dims[1]) : (d->a_ndims == 1 ? d->a_dims[0] : 1);
+}
 
 #if defined(CUDAMEM_MODULE)
 
@@ -38,6 +54,29 @@ static char* cublas_error_text [] = {
   "Access to GPU memory space failed",
   "GPU program failed to execute",
   "An internal CUBLAS operation failed"};
+
+#else
+
+/* client code only */
+
+extern char **cublas_error_text;
+
+static PyTypeObject *cudamem_DeviceMemoryType;
+ 
+static inline int import_cudamem(void) {
+  PyObject *module = PyImport_ImportModule("_cudamem");
+  
+  if (module != NULL) {
+    cudamem_DeviceMemoryType = (PyTypeObject *)PyObject_GetAttrString(module, "DeviceMemory");
+    if (cudamem_DeviceMemoryType == NULL) return -1;
+
+  } 
+  return 0;
+}
+
+#endif /* client code */
+
+/* inline utilities */
 
 static inline char* get_cublas_error_text(cublasStatus sts) {
   switch (sts) {
@@ -59,23 +98,6 @@ static inline char* get_cublas_error_text(cublasStatus sts) {
       return "unknown cublas error!";
   }
 }
-#else
-
-/* client code */
-static PyTypeObject *cudamem_DeviceMemoryType;
- 
-static inline int import_cudamem(void) {
-  PyObject *module = PyImport_ImportModule("_cudamem");
-  
-  if (module != NULL) {
-    cudamem_DeviceMemoryType = (PyTypeObject *)PyObject_GetAttrString(module, "DeviceMemory");
-    if (cudamem_DeviceMemoryType == NULL) return -1;
-
-  } 
-  return 0;
-}
-
-#endif /* client code */
 
 #endif
 

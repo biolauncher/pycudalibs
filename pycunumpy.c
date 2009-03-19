@@ -39,13 +39,13 @@ numpy_Array2cuda_DeviceMemory(PyObject *dummy, PyObject *args) {
         trace("dims ok\n");
         // create DeviceMemory
         npy_intp *dims = PyArray_DIMS(array);
-        int elements = (rank == 1) ? dims[0] : dims[0] * dims[1];
+        //int elements = (rank == 1) ? dims[0] : dims[0] * dims[1];
 
         devicemem = PyType_GenericNew(cudamem_DeviceMemoryType, NULL, NULL);
         trace("new device mem\n");
         
         if (devicemem != NULL) {
-          (void) PyObject_CallMethod(devicemem, "__init__", "ii", elements, FLOAT32_BYTES);
+          (void) PyObject_CallMethod(devicemem, "__init__", "iiii", rank, dims[0], dims[1], FLOAT32_BYTES);
           trace("init device mem\n");
 
           // fill it in hmmm need to sort this method
