@@ -17,40 +17,47 @@ static PyObject*
 numpy_Array2cuda_DeviceMemory(PyObject *dummy, PyObject *args) {
   PyObject *object = NULL;
   PyArrayObject *array = NULL;
-  PyObject *devicemem = NULL;
-  int rank;
+  cuda_DeviceMemory *devicemem = NULL;
+  int ndims;
 
 
   if (PyArg_ParseTuple(args, "O", &object)) {
     trace("parsed args\n");
-    array = (PyArrayObject*)PyArray_FROM_OTF(object, NPY_FLOAT32, NPY_FORTRAN | NPY_ALIGNED);
+    array = (PyArrayObject*) PyArray_FROM_OTF(object, NPY_FLOAT32, NPY_FORTRAN | NPY_ALIGNED);
     trace("got array\n");
     
     if (array == NULL) return NULL;
     
     else {
 
-      // check dimensions or rank - we only do vectors and matrices.
-      rank = PyArray_NDIM(array);
-      if (rank < 1 || rank > 2) {
-        // TODO create exception
+      // check dimensions or ndims - we only do vectors and matrices.
+      ndims = PyArray_NDIM(array);
+      if (ndims < 1 || ndims > 2) {
+        PyErr_SetString(PyExc_TypeError, "number of array dimensions must be 1 or 2");
 
       } else {
         trace("dims ok\n");
         // create DeviceMemory
         npy_intp *dims = PyArray_DIMS(array);
-        //int elements = (rank == 1) ? dims[0] : dims[0] * dims[1];
 
-        devicemem = PyType_GenericNew(cudamem_DeviceMemoryType, NULL, NULL);
+        devicemem = (cuda_DeviceMemory*) PyType_GenericNew(cudamem_DeviceMemoryType, NULL, NULL);
         trace("new device mem\n");
         
         if (devicemem != NULL) {
-          (void) PyObject_CallMethod(devicemem, "__init__", "iiii", rank, dims[0], dims[1], FLOAT32_BYTES);
+          (void) PyObject_CallMethod((PyObject *) devicemem, "__init__", "iiii", 
+                                     ndims, dims[0], dims[1], FLOAT32_BYTES);
           trace("init device mem\n");
 
-          // fill it in hmmm need to sort this method
-          // int elements, int elem-size, void* data
-          //PyObject* PyObject_CallMethodObjArgs(PyObject *o, PyObject *name, ..., NULL);
+          void* source = PyArray_DATA(array);
+          int n = a_elements(devicemem);
+
+          // would set matrix be quicker here for matrices?
+          if (cuda_error(cublasSetVector(n, devicemem->e_size, source, 1, 
+                                         devicemem->d_ptr, 1), "cublasSetVector")) {
+            Py_DECREF(array);
+            return NULL;
+          }
+
           Py_DECREF(array);
           trace("decref array\n");
           return Py_BuildValue("N", devicemem);

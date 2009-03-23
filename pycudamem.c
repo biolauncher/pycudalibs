@@ -10,18 +10,6 @@ static PyObject* cuda_exception;
 // TODO - sort out  the instrumentation and tracing of alloc/dealloc
 // TODO - migrate this to pure cuda?
 
-static inline int cuda_error(int status, char* where) {
-
-  trace("CUDACALL %s: status = %d\n", where, status);
-
-  if (status == CUBLAS_STATUS_SUCCESS) {
-    return 0;
-
-  } else {
-    PyErr_SetString(cuda_exception, get_cublas_error_text(status));
-    return 1;
-  }
-}
 
 static void
 cuda_DeviceMemory_dealloc(cuda_DeviceMemory* self) {
@@ -71,7 +59,7 @@ cuda_DeviceMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     self->a_ndims = 0;
     self->a_dims[0] = 0;
     self->a_dims[1] = 0;
-    self->a_flags = 0; // REAL SINGLE precision default
+    self->a_flags = 0; 
   }
   
   return (PyObject *)self;
@@ -159,7 +147,8 @@ is assumed throughout CUBLAS. If the vector is part of a matrix, a
 vector increment equal to 1 accesses a (partial) column of the matrix.  
 Similarly, using an increment equal to the leading dimension of the  
 matrix accesses a (partial) row.  
-*/
+
+DEPRECATED - no direct way to manipulate memory provided.
 
 static PyObject*
 cuda_DeviceMemory_getVector(cuda_DeviceMemory *self, PyObject *args) {
@@ -174,7 +163,7 @@ cuda_DeviceMemory_getVector(cuda_DeviceMemory *self, PyObject *args) {
   else
     return NULL;
 }
-
+*/
 
 /*
 cublasStatus 
@@ -189,7 +178,8 @@ general, y points to an object, or part of an object, allocated via
 cublasAlloc(). Column‐major format for two‐dimensional matrices  
 is assumed throughout CUBLAS. If the vector is part of a matrix, a  
 vector increment equal to 1 accesses a (partial) column of the matrix.  
-*/
+
+DEPRECATED
 
 static PyObject*
 cuda_DeviceMemory_setVector(cuda_DeviceMemory *self, PyObject *args) {
@@ -205,7 +195,7 @@ cuda_DeviceMemory_setVector(cuda_DeviceMemory *self, PyObject *args) {
     return NULL;
 }
 
-
+*/
 
 /***************
  * method table

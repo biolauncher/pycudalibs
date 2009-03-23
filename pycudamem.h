@@ -42,7 +42,6 @@ static inline int a_elements(cuda_DeviceMemory* d) {
   return (d->a_ndims == 2) ? (d->a_dims[0] * d->a_dims[1]) : (d->a_ndims == 1 ? d->a_dims[0] : 1);
 }
 
-#if defined(CUDAMEM_MODULE)
 
 /* Lookup of cublas error since we use CUBLAS routines in _cudamem module for allocation */
 
@@ -55,11 +54,12 @@ static char* cublas_error_text [] = {
   "GPU program failed to execute",
   "An internal CUBLAS operation failed"};
 
+#if defined(CUDAMEM_MODULE)
+/* module definition only */
+
 #else
 
 /* client code only */
-
-extern char **cublas_error_text;
 
 static PyTypeObject *cudamem_DeviceMemoryType;
  
@@ -96,6 +96,18 @@ static inline char* get_cublas_error_text(cublasStatus sts) {
       return cublas_error_text[6];
     default:
       return "unknown cublas error!";
+  }
+}
+
+static inline int cuda_error(int status, char* where) {
+  trace("CUDACALL %s: status = %d\n", where, status);
+
+  if (status == CUBLAS_STATUS_SUCCESS) {
+    return 0;
+
+  } else {
+    PyErr_SetString(PyExc_RuntimeError, get_cublas_error_text(status));
+    return 1;
   }
 }
 
