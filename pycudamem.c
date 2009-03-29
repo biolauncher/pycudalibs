@@ -7,9 +7,6 @@
 
 static PyObject* cuda_exception;
 
-// TODO - sort out  the instrumentation and tracing of alloc/dealloc
-// TODO - migrate this to pure cuda?
-
 
 static void
 cuda_DeviceMemory_dealloc(cuda_DeviceMemory* self) {
@@ -71,6 +68,12 @@ cuda_DeviceMemory_init(cuda_DeviceMemory *self, PyObject *args, PyObject *kwds) 
   if (! PyArg_ParseTuple(args, "iiii", &self->a_ndims, &self->a_dims[0], &self->a_dims[1], &self->e_size))
     return -1; 
 
+  // may lift this in time
+  if (self->a_ndims < 1 || self->a_ndims > 2) {
+    PyErr_SetString(PyExc_TypeError, "number of array dimensions must be 1 or 2");
+    return -1;
+  }
+
   int n_elements = a_elements(self);
 
   trace("TRACE cuda_DeviceMemory_init: elements: %d element_size: %d\n", n_elements, self->e_size);
@@ -111,11 +114,11 @@ cuda_DeviceMemory_str(cuda_DeviceMemory *self) {
 }
 
 
-/* N.B. we don't expose the device pointer at all 
-   TODO some nice class constants for double and float sizes */
+/* N.B. we don't expose the internals at all 
+   TODO some nice class constants for double and float sizes etc. */
 
 PyMemberDef cuda_DeviceMemory_members[] = {
-  /*
+  /* TODO 
     {"m", T_INT, offsetof(cuda_DeviceMemory, e_num), READONLY,
      "number of rows"},
 
@@ -128,81 +131,12 @@ PyMemberDef cuda_DeviceMemory_members[] = {
 };
 
 
-/******************************************************
- * device memory loads and stores - no bounds checking 
- ******************************************************/
-
-/*
-cublasStatus 
-cublasGetVector (int n, int elemSize, const void *x, 
- int incx, void *y, int incy) 
-
-copies n elements from a vector x in GPU memory space to a vector y  
-in CPU memory space. Elements in both vectors are assumed to have a  
-size of elemSize bytes. Storage spacing between consecutive elements  
-is incx for the source vector x and incy for the destination vector y. In  
-general, x points to an object, or part of an object, allocated via  
-cublasAlloc(). Column‐major format for two‐dimensional matrices  
-is assumed throughout CUBLAS. If the vector is part of a matrix, a  
-vector increment equal to 1 accesses a (partial) column of the matrix.  
-Similarly, using an increment equal to the leading dimension of the  
-matrix accesses a (partial) row.  
-
-DEPRECATED - no direct way to manipulate memory provided.
-
-static PyObject*
-cuda_DeviceMemory_getVector(cuda_DeviceMemory *self, PyObject *args) {
-  int n, elemSize, incx, incy, vsize;
-  void* vector;
-
-  if (PyArg_ParseTuple(args, "iiit#i", &n, &elemSize, &incx, &vector, &vsize, &incy))
-    if (cuda_error(cublasGetVector(n, elemSize, self->d_ptr, incx, vector, incy), "cublasGetVector"))
-      return NULL;
-    else
-      return Py_BuildValue("");
-  else
-    return NULL;
-}
-*/
-
-/*
-cublasStatus 
-cublasSetVector (int n, int elemSize, const void *x, 
-                 int incx, void *y, int incy) 
-
-copies n elements from a vector x in CPU memory space to a vector y  
-in GPU memory space. Elements in both vectors are assumed to have a  
-size of elemSize bytes. Storage spacing between consecutive elements  
-is incx for the source vector x and incy for the destination vector y. In  
-general, y points to an object, or part of an object, allocated via  
-cublasAlloc(). Column‐major format for two‐dimensional matrices  
-is assumed throughout CUBLAS. If the vector is part of a matrix, a  
-vector increment equal to 1 accesses a (partial) column of the matrix.  
-
-DEPRECATED
-
-static PyObject*
-cuda_DeviceMemory_setVector(cuda_DeviceMemory *self, PyObject *args) {
-  int n, elemSize, incx, incy, vsize;
-  void* vector;
-
-  if (PyArg_ParseTuple(args, "iiit#i", &n, &elemSize, &incx, &vector, &vsize, &incy))
-    if (cuda_error(cublasSetVector(n, elemSize, self->d_ptr, incx, vector, incy), "cublasSetVector"))
-      return NULL;
-    else
-      return Py_BuildValue("");
-  else
-    return NULL;
-}
-
-*/
-
 /***************
  * method table
  **************/
 
 static PyMethodDef cuda_DeviceMemory_methods[] = {
-  /*
+  /* TODO some accessors e.g. shape tuple property
   {"storeVector", (PyCFunction) cuda_DeviceMemory_getVector, METH_VARARGS,
    "Store DeviceMemory into host memory."},
   {"loadVector", (PyCFunction) cuda_DeviceMemory_setVector, METH_VARARGS,

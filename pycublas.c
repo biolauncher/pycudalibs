@@ -6,7 +6,8 @@
  */
 
 #include <pycublas.h>
-#include <stdio.h>
+#include <pycudamem.h>
+
 
 static PyMethodDef _cublas_methods[] = {
   {"init", init, METH_VARARGS, 
@@ -28,30 +29,7 @@ PyMODINIT_FUNC init_cublas(void) {
   // initialise the module
   PyObject* module = Py_InitModule("_cublas", _cublas_methods);
   if (module == NULL) return;
-  
-  else {
-    cublas_exception = PyErr_NewException("cublas.error", NULL, NULL);
-    Py_INCREF(cublas_exception);
-    PyModule_AddObject(module, "error", cublas_exception);
-  } 
-}
-
-/* cublas library error to Python exception */
-
-static inline int cublas_error(cublasStatus status, char* what) {
-  if (status != CUBLAS_STATUS_SUCCESS) {
-    PyErr_SetString(cublas_exception, get_cublas_error_text(status));
-#if DEBUG > 0
-    fprintf(stderr, "bad vibes from CUDA: %s=%d\n", what, status);
-#endif
-    return 1;
-    
-  } else {
-#if DEBUG > 0
-    fprintf(stderr, "%s: looking good in the CUDA device!\n", what);
-#endif
-    return 0;
-  }
+  import_cudamem();
 }
 
 
@@ -62,7 +40,7 @@ static inline int cublas_error(cublasStatus status, char* what) {
 static PyObject* init(PyObject* self, PyObject* args) {
   if (!PyArg_ParseTuple(args, "")) 
     return NULL;
-  else if (cublas_error(cublasInit(), "cublasInit"))
+  else if (cuda_error(cublasInit(), "cublasInit"))
     return NULL;
   else 
     return Py_BuildValue("");
@@ -71,7 +49,7 @@ static PyObject* init(PyObject* self, PyObject* args) {
 static PyObject* shutdown(PyObject* self, PyObject* args) {
   if (!PyArg_ParseTuple(args, "")) 
     return NULL;
-  else if (cublas_error(cublasShutdown(), "cublasShutdown"))
+  else if (cuda_error(cublasShutdown(), "cublasShutdown"))
     return NULL;
   else
     return Py_BuildValue("");
@@ -145,10 +123,59 @@ CUBLAS_STATUS_NOT_INITIALIZED  if CUBLAS was not initialized
 CUBLAS_STATUS_INVALID_VALUE    if m < 0, n < 0, or k < 0
 CUBLAS_STATUS_EXECUTION_FAILED if function failed to launch on GPU
 
+*/
 
- */
+/*
+We take the input matrices A, B and C as well as the scalars and
+transposition keys - We know the dimensions of the input objects as
+these are required to be DeviceMemory arrays.
+
+char transa, char transb, float alpha, DeviceMemory A, deviceMemory B,
+float beta, deviceMemory C 
+return the updated array C 
+*/
 
 static PyObject* sgemm(PyObject* self, PyObject* args) {
-  // get the matrix and alpha and beta (optional args) copy em all up to the device
-  return Py_BuildValue("i", 42);
+  cuda_DeviceMemory *A, *B, *C;
+  float alpha, beta;
+  char transa, transb;
+
+  if (PyArg_ParseTuple(args, "ccfO!O!fO!", 
+                       &transa, &transb, &alpha, 
+                       cudamem_DeviceMemoryType, &A, 
+                       cudamem_DeviceMemoryType, &B, 
+                       &beta, cudamem_DeviceMemoryType, &C)) {
+    //trace("args ok\n");
+    // call blas proc //
+    /*
+      void 
+      cublasSgemm (char transa, char transb, int m, int n, 
+                   int k, float alpha, const float *A, int lda, 
+                   const float *B, int ldb, float beta, 
+                   float *C, int ldc)
+    */
+    // need todo some dimension checking here! 
+    int lda = A->a_dims[0];
+    int ldb = B->a_dims[0];
+    int ldc = C->a_dims[0];
+
+    // and trans? dimension swapping?
+
+    // what happens to ld when transposing? normally in fortran matrix rep it is row size i.e. dims[0]
+    //nothing me thinks we present matrices as is
+    // then shouldn't this be the case for other dimensions?
+
+    cublasSgemm(transa, transb, A->a_dims[0], B->a_dims[1], A->a_dims[1]=B->a_dims[0], 
+                alpha, A->d_ptr, lda, B->d_ptr, ldb, beta, C->d_ptr, ldc);
+
+    if (cublas_error("sgemm")) 
+      return NULL;
+    else 
+      return Py_BuildValue("N", C);
+  
+  } else {
+    return NULL;
+  }
 }
+
+

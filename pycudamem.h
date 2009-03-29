@@ -111,6 +111,10 @@ static inline int cuda_error(int status, char* where) {
   }
 }
 
+static inline int cublas_error(char* where) {
+  return cuda_error(cublasGetError(), where);
+}
+
 #endif
 
 
