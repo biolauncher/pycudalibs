@@ -171,7 +171,7 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
     if (cublas_error("sgemm")) 
       return NULL;
     else 
-      return Py_BuildValue("N", C);
+      return Py_BuildValue("O", C);
   
   } else {
     return NULL;
