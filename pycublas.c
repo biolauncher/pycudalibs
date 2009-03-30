@@ -21,7 +21,7 @@ static PyMethodDef _cublas_methods[] = {
 
 /* define an exception object for cublas */
 
-static PyObject* cublas_exception;
+//static PyObject* cublas_exception; // why are we not using this?
 
 /* initialise the Python c extension module - this function has to be named consistently */
 

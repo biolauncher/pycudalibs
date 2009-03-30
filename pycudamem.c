@@ -113,21 +113,22 @@ cuda_DeviceMemory_str(cuda_DeviceMemory *self) {
   return _stringify(self);
 }
 
+/* accessor methods */
 
-/* N.B. we don't expose the internals at all 
-   TODO some nice class constants for double and float sizes etc. */
+static PyObject*
+cuda_DeviceMemory_getShape(cuda_DeviceMemory *self, void *closure) {
+  if (self->a_ndims == 2) return Py_BuildValue("(ii)", self->a_dims[0], self->a_dims[1]);
+  else return Py_BuildValue("(i)", self->a_dims[0]);
+}
 
-PyMemberDef cuda_DeviceMemory_members[] = {
-  /* TODO 
-    {"m", T_INT, offsetof(cuda_DeviceMemory, e_num), READONLY,
-     "number of rows"},
+/***********************************
+ * expose basic informational slots 
+ ***********************************/
 
-    {"n", T_INT, offsetof(cuda_DeviceMemory, e_num), READONLY,
-     "number of columns"},
-    {"element_size", T_INT, offsetof(cuda_DeviceMemory, e_size), READONLY,
-     "size of each element"},
-  */
-    {NULL}
+static PyMemberDef cuda_DeviceMemory_members[] = {
+  {"element_size", T_INT, offsetof(cuda_DeviceMemory, e_size), READONLY,
+   "Size of each device array element"},
+  {NULL}
 };
 
 
@@ -136,13 +137,21 @@ PyMemberDef cuda_DeviceMemory_members[] = {
  **************/
 
 static PyMethodDef cuda_DeviceMemory_methods[] = {
-  /* TODO some accessors e.g. shape tuple property
-  {"storeVector", (PyCFunction) cuda_DeviceMemory_getVector, METH_VARARGS,
-   "Store DeviceMemory into host memory."},
-  {"loadVector", (PyCFunction) cuda_DeviceMemory_setVector, METH_VARARGS,
-   "Load host memory into DeviceMemory."},
+  /*
+    {"shape", (PyCFunction) cuda_DeviceMemory_getShape, METH_VARARGS,
+    "Get the shape of the device memory."},
   */
-  {NULL, NULL, 0, NULL}        /* Sentinel */
+  {NULL, NULL, 0, NULL} 
+};
+
+/**********************
+ * getters and setters
+ *********************/
+static PyGetSetDef cuda_DeviceMemory_properties[] = {
+  {"shape", (getter) cuda_DeviceMemory_getShape, (setter) NULL, 
+   "shape of device array", NULL},
+  // TODO numpy style dtype?
+  {NULL}
 };
 
 
@@ -181,7 +190,7 @@ static PyTypeObject cuda_DeviceMemoryType = {
     0,                                        /* tp_iternext */
     cuda_DeviceMemory_methods,                /* tp_methods */
     cuda_DeviceMemory_members,                /* tp_members */
-    0,                                        /* tp_getset */
+    cuda_DeviceMemory_properties,             /* tp_getset */
     0,                                        /* tp_base */
     0,                                        /* tp_dict */
     0,                                        /* tp_descr_get */
