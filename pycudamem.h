@@ -1,6 +1,9 @@
 /* copyright (c) 2009 Simon Beaumont - All Rights Reserved */
 
-/* this is the master header that should be included my all c extension modules here */
+/* 
+ * This is the master header that should be included in all c extension modules in the package 
+ * it defines the _cudamem module which provides a cuda array type along the lines of numpy
+ */
 
 #if defined(_PYCUDA_H)
 #else
@@ -15,7 +18,12 @@
 #define trace(format, ...)
 #endif
 
-/* A python base class to encapsulate CUDA device memory. Fortran array semantics apply.  */
+
+/* defines for various things */
+
+#define CUDAMEM_MODULE_NAME "_cudamem"
+#define CUDAMEM_ARRAY_TYPE_NAME "_cudamem.array"
+#define CUDAMEM_ERROR_TYPE_NAME "_cudamem.ERROR"
 
 #define DEVICE_MEMORY_MAXDIMS 2 
 #define FLOAT32_BYTES 4
@@ -26,10 +34,11 @@
 #define COMPLEX_TYPE 1
 #define DOUBLE_TYPE 2
 
+/* A python base class to encapsulate CUDA device memory. Fortran array semantics apply.  */
+
 typedef struct {
   PyObject_HEAD
   void* d_ptr;                       /* opaque device pointer */
-  int a_type;                        /* type of elements */
   int a_ndims;                       /* number of dimensions */
   int a_dims[DEVICE_MEMORY_MAXDIMS]; /* dimensions */
   int e_size;                        /* sizeof element */
@@ -42,6 +51,8 @@ static inline int a_elements(cuda_DeviceMemory* d) {
   return (d->a_ndims == 2) ? (d->a_dims[0] * d->a_dims[1]) : (d->a_ndims == 1 ? d->a_dims[0] : 1);
 }
 
+/* module based exception */
+static PyObject* cuda_exception;
 
 /* Lookup of cublas error since we use CUBLAS routines in _cudamem module for allocation */
 
@@ -55,7 +66,7 @@ static char* cublas_error_text [] = {
   "An internal CUBLAS operation failed"};
 
 #if defined(CUDAMEM_MODULE)
-/* module definition only */
+/* module definition only - see: pycudamem.c */
 
 #else
 
@@ -64,12 +75,14 @@ static char* cublas_error_text [] = {
 static PyTypeObject *cudamem_DeviceMemoryType;
  
 static inline int import_cudamem(void) {
-  PyObject *module = PyImport_ImportModule("_cudamem");
+  PyObject *module = PyImport_ImportModule(CUDAMEM_MODULE_NAME);
   
   if (module != NULL) {
-    cudamem_DeviceMemoryType = (PyTypeObject *)PyObject_GetAttrString(module, "DeviceMemory");
+    cudamem_DeviceMemoryType = (PyTypeObject *)PyObject_GetAttrString(module, CUDAMEM_ARRAY_TYPE_NAME);
     if (cudamem_DeviceMemoryType == NULL) return -1;
 
+    cuda_exception = PyObject_GetAttrString(module, CUDAMEM_ERROR_TYPE_NAME);
+    if (cuda_exception == NULL) return -1;
   } 
   return 0;
 }
@@ -106,7 +119,7 @@ static inline int cuda_error(int status, char* where) {
     return 0;
 
   } else {
-    PyErr_SetString(PyExc_RuntimeError, get_cublas_error_text(status));
+    PyErr_SetString(cuda_exception, get_cublas_error_text(status));
     return 1;
   }
 }

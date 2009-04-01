@@ -5,33 +5,9 @@
 #include <structmember.h>
 #include <stdio.h>
 
-static PyObject* cuda_exception;
-
 
 static void
 cuda_DeviceMemory_dealloc(cuda_DeviceMemory* self) {
-
-  /* don't really understand what this callback is
-  PyObject *cbresult;
-
-  if (self->my_callback != NULL) {
-    PyObject *err_type, *err_value, *err_traceback;
-    int have_error = PyErr_Occurred() ? 1 : 0;
-    
-    if (have_error)
-      PyErr_Fetch(&err_type, &err_value, &err_traceback);
-    
-    cbresult = PyObject_CallObject(self->my_callback, NULL);
-    if (cbresult == NULL)
-      PyErr_WriteUnraisable(self->my_callback);
-    else
-      Py_DECREF(cbresult);
-    
-    if (have_error)
-      PyErr_Restore(err_type, err_value, err_traceback);
-    
-    Py_DECREF(self->my_callback);
-  } */
 
   trace("TRACE cuda_DeviceMemory_dealloc: %0x (%0x)\n", (int) self, (int) self->d_ptr);
 
@@ -162,7 +138,7 @@ static PyGetSetDef cuda_DeviceMemory_properties[] = {
 static PyTypeObject cuda_DeviceMemoryType = {
     PyObject_HEAD_INIT(NULL)
     0,                                        /*ob_size*/
-    "cuda.DeviceMemory",                      /*tp_name*/
+    CUDAMEM_ARRAY_TYPE_NAME,                  /*tp_name*/
     sizeof(cuda_DeviceMemory),                /*tp_basicsize*/
     0,                                        /*tp_itemsize*/
     (destructor)cuda_DeviceMemory_dealloc,    /*tp_dealloc*/
@@ -181,7 +157,7 @@ static PyTypeObject cuda_DeviceMemoryType = {
     0,                                        /*tp_setattro*/
     0,                                        /*tp_as_buffer*/
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
-    "CUDA device memory references",          /* tp_doc */
+    "CUDA device array",                      /* tp_doc */
     0,                                        /* tp_traverse */
     0,                                        /* tp_clear */
     0,                                        /* tp_richcompare */
@@ -216,16 +192,16 @@ init_cudamem(void) {
     if (PyType_Ready(&cuda_DeviceMemoryType) < 0)
         return;
 
-    module = Py_InitModule3("_cudamem", module_methods, "CUDA device memory utility module.");
+    module = Py_InitModule3(CUDAMEM_MODULE_NAME, module_methods, "CUDA device memory utility module.");
 
     if (module == NULL) return;
     
     else {
       Py_INCREF(&cuda_DeviceMemoryType);
-      PyModule_AddObject(module, "DeviceMemory", (PyObject *)&cuda_DeviceMemoryType);
+      PyModule_AddObject(module, CUDAMEM_ARRAY_TYPE_NAME, (PyObject *)&cuda_DeviceMemoryType);
 
-      cuda_exception = PyErr_NewException("cudamem.error", NULL, NULL);
+      cuda_exception = PyErr_NewException(CUDAMEM_ERROR_TYPE_NAME, NULL, NULL);
       Py_INCREF(cuda_exception);
-      PyModule_AddObject(module, "error", cuda_exception);
+      PyModule_AddObject(module, CUDAMEM_ERROR_TYPE_NAME, cuda_exception);
     }
 }
