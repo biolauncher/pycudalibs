@@ -6,7 +6,7 @@
  */
 
 #include <pycublas.h>
-#include <pycudamem.h>
+#include <pycuda.h>
 
 
 static PyMethodDef _cublas_methods[] = {
@@ -29,7 +29,7 @@ PyMODINIT_FUNC init_cublas(void) {
   // initialise the module
   PyObject* module = Py_InitModule("_cublas", _cublas_methods);
   if (module == NULL) return;
-  import_cudamem();
+  import_cuda();
 }
 
 
@@ -73,9 +73,9 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
 
   if (PyArg_ParseTuple(args, "ccfO!O!fO!", 
                        &transa, &transb, &alpha, 
-                       cudamem_DeviceMemoryType, &A, 
-                       cudamem_DeviceMemoryType, &B, 
-                       &beta, cudamem_DeviceMemoryType, &C)) {
+                       cuda_DeviceMemoryType, &A, 
+                       cuda_DeviceMemoryType, &B, 
+                       &beta, cuda_DeviceMemoryType, &C)) {
 
     int lda = A->a_dims[0];
     int ldb = B->a_dims[0];

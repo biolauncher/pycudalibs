@@ -2,7 +2,7 @@
 
 /* 
  * This is the master header that should be included in all c extension modules in the package 
- * it defines the _cudamem module which provides a cuda array type along the lines of numpy
+ * it defines the _cuda module which provides a cuda array type along the lines of numpy
  */
 
 #if defined(_PYCUDA_H)
@@ -21,9 +21,14 @@
 
 /* defines for various things */
 
-#define CUDAMEM_MODULE_NAME "_cudamem"
-#define CUDAMEM_ARRAY_TYPE_NAME "_cudamem.array"
-#define CUDAMEM_ERROR_TYPE_NAME "_cudamem.ERROR"
+#define CUDA_MODULE_NAME "_cuda"
+
+#define CUDA_ARRAY_TYPE_NAME "cuda.array"
+#define CUDA_ARRAY_TYPE_SYM_NAME "array"
+
+#define CUDA_ERROR_TYPE_NAME "cuda.ERROR"
+#define CUDA_ERROR_TYPE_SYM_NAME "ERROR"
+
 
 #define DEVICE_MEMORY_MAXDIMS 2 
 #define FLOAT32_BYTES 4
@@ -54,7 +59,7 @@ static inline int a_elements(cuda_DeviceMemory* d) {
 /* module based exception */
 static PyObject* cuda_exception;
 
-/* Lookup of cublas error since we use CUBLAS routines in _cudamem module for allocation */
+/* Lookup of cublas error since we use CUBLAS routines in _cuda module for allocation */
 
 static char* cublas_error_text [] = {
   "CUBLAS library not initialized",
@@ -65,23 +70,23 @@ static char* cublas_error_text [] = {
   "GPU program failed to execute",
   "An internal CUBLAS operation failed"};
 
-#if defined(CUDAMEM_MODULE)
-/* module definition only - see: pycudamem.c */
+#if defined(CUDA_MODULE)
+/* module definition only - see: pycuda.c */
 
 #else
 
 /* client code only */
 
-static PyTypeObject *cudamem_DeviceMemoryType;
+static PyTypeObject *cuda_DeviceMemoryType;
  
-static inline int import_cudamem(void) {
-  PyObject *module = PyImport_ImportModule(CUDAMEM_MODULE_NAME);
+static inline int import_cuda(void) {
+  PyObject *module = PyImport_ImportModule(CUDA_MODULE_NAME);
   
   if (module != NULL) {
-    cudamem_DeviceMemoryType = (PyTypeObject *)PyObject_GetAttrString(module, CUDAMEM_ARRAY_TYPE_NAME);
-    if (cudamem_DeviceMemoryType == NULL) return -1;
+    cuda_DeviceMemoryType = (PyTypeObject *)PyObject_GetAttrString(module, CUDA_ARRAY_TYPE_SYM_NAME);
+    if (cuda_DeviceMemoryType == NULL) return -1;
 
-    cuda_exception = PyObject_GetAttrString(module, CUDAMEM_ERROR_TYPE_NAME);
+    cuda_exception = PyObject_GetAttrString(module, CUDA_ERROR_TYPE_SYM_NAME);
     if (cuda_exception == NULL) return -1;
   } 
   return 0;

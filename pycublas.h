@@ -3,13 +3,13 @@
 #if defined(_PYCUBLAS_H)
 #else
 #define _PYCUBLAS_H 1
-#include <pycudamem.h>
+#include <pycuda.h>
 
 /* Python callable functions in the CUDA BLAS api */
 
 static PyObject* init(PyObject* self, PyObject* args); 
-static PyObject* sgemm(PyObject* self, PyObject* args);
 static PyObject* shutdown(PyObject* self, PyObject* args); 
+static PyObject* sgemm(PyObject* self, PyObject* args);
 
 
 #endif

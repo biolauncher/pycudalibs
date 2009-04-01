@@ -1,10 +1,10 @@
 /* Copyright (c) 2009 Simon Beaumont - All Rights Reserved */
 
 /**
- * numpy integration with cudamemory
+ * numpy integration with cudaory
  */
 
-#include <pycudamem.h>
+#include <pycuda.h>
 #include <arrayobject.h>
 
 
@@ -31,8 +31,8 @@ numpy_Array2cuda_DeviceMemory(PyObject *dummy, PyObject *args) {
       npy_intp *dims = PyArray_DIMS(array);
       int ndims = PyArray_NDIM(array);
 
-      devicemem = (cuda_DeviceMemory*) cudamem_DeviceMemoryType->tp_new(cudamem_DeviceMemoryType, NULL, NULL);
-      //devicemem = (cuda_DeviceMemory*) PyType_GenericNew(cudamem_DeviceMemoryType, NULL, NULL);
+      devicemem = (cuda_DeviceMemory*) cuda_DeviceMemoryType->tp_new(cuda_DeviceMemoryType, NULL, NULL);
+      //devicemem = (cuda_DeviceMemory*) PyType_GenericNew(cuda_DeviceMemoryType, NULL, NULL);
         
       if (devicemem != NULL) {
 
@@ -78,7 +78,7 @@ static PyObject*
 cuda_DeviceMemory2numpy_Array(PyObject *dummy, PyObject *args) {
   PyObject *object;
 
-  if (PyArg_ParseTuple(args, "O!", cudamem_DeviceMemoryType, &object)) {
+  if (PyArg_ParseTuple(args, "O!", cuda_DeviceMemoryType, &object)) {
     cuda_DeviceMemory *deviceMemory = (cuda_DeviceMemory *) object;
 
     npy_intp dims[2];
@@ -123,6 +123,6 @@ init_cunumpy(void) {
   module = Py_InitModule("_cunumpy", functions);
   // load numpy
   import_array();
-  // load _cudamem module
-  import_cudamem();
+  // load _cuda module
+  import_cuda();
 }
