@@ -6,7 +6,7 @@
  */
 
 #include <pycublas.h>
-#include <pycuda.h>
+#include <pycunumpy.h>
 
 
 static PyMethodDef _cublas_methods[] = {
@@ -29,7 +29,7 @@ PyMODINIT_FUNC init_cublas(void) {
   // initialise the module
   PyObject* module = Py_InitModule("_cublas", _cublas_methods);
   if (module == NULL) return;
-  import_cuda();
+  import_cunumpy();
 }
 
 

@@ -2,12 +2,12 @@
 
 /* 
  * This is the master header that should be included in all c extension modules in the package 
- * it defines the _cuda module which provides a cuda array type along the lines of numpy
+ * it defines the _cunumpy module which provides a cuda array type along the lines of numpy
  */
 
-#if defined(_PYCUDA_H)
+#if defined(_PYCUNUMPY_H)
 #else
-#define _PYCUDA_H 1
+#define _PYCUNUMPY_H 1
 #include <Python.h>
 #include <cublas.h>
 
@@ -21,7 +21,7 @@
 
 /* defines for various things */
 
-#define CUDA_MODULE_NAME "_cuda"
+#define CUDA_MODULE_NAME "_cunumpy"
 
 #define CUDA_ARRAY_TYPE_NAME "cuda.array"
 #define CUDA_ARRAY_TYPE_SYM_NAME "array"
@@ -70,7 +70,7 @@ static char* cublas_error_text [] = {
   "GPU program failed to execute",
   "An internal CUBLAS operation failed"};
 
-#if defined(CUDA_MODULE)
+#if defined(CUNUMPY_MODULE)
 /* module definition only - see: pycuda.c */
 
 #else
@@ -79,7 +79,7 @@ static char* cublas_error_text [] = {
 
 static PyTypeObject *cuda_DeviceMemoryType;
  
-static inline int import_cuda(void) {
+static inline int import_cunumpy(void) {
   PyObject *module = PyImport_ImportModule(CUDA_MODULE_NAME);
   
   if (module != NULL) {

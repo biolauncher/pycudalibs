@@ -3,7 +3,7 @@
 #if defined(_PYCUBLAS_H)
 #else
 #define _PYCUBLAS_H 1
-#include <pycuda.h>
+#include <pycunumpy.h>
 
 /* Python callable functions in the CUDA BLAS api */
 
