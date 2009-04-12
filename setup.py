@@ -30,13 +30,16 @@ cublas = Extension('_cublas',
                    sources = ['pycublas.c'])
 
 
-setup (name = 'CUDA Libraries',
+setup (name = 'CuNumpy',
        version = '0.1',
-       description = 'Low level CUDA Library APIs',
+       description = 'CUDA BLAS integration with numpy arrays',
        author = 'Simon E. Beaumont',
        author_email = 'seb@modelsciences.com',
        url = 'http://www.modelsciences.com',
        long_description = '''
 APIs for CUDA libraries with support for numpy arrays. Unreleased! Caveat Emptor!
 ''',
-       ext_modules = [cunumpy, cublas])
+       ext_modules = [cunumpy, cublas],
+       py_modules = ['cunumpy'],
+       requires=['numpy(>=1.2)']
+       )
