@@ -1,12 +1,11 @@
 /* Copyright (c) 2009 Simon Beaumont - All Rights Reserved */
 
 /**
- * Python integration to CUDA BLAS routines. This low level API module
- * is called _cublas and has an associated Python wrapper module.
+ * Python integration to CUDA BLAS routines.
+ *  defines module: _cublas 
  */
-
+#define NO_IMPORT_ARRAY
 #include <pycublas.h>
-#include <pycunumpy.h>
 
 
 static PyMethodDef _cublas_methods[] = {

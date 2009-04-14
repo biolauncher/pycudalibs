@@ -1,25 +1,23 @@
 /* Copyright (C) 2009 Simon Beaumont - All Rights Reserved */
 
 /**
- * numpy integration with cuda device memory module: _cunumpy
+ * numpy integration with cuda device memory, defines module: _cunumpy
  */
 
 #define CUNUMPY_MODULE
 #include <pycunumpy.h>
-#include <structmember.h>
-#include <arrayobject.h>
 
 static void
 cuda_DeviceMemory_dealloc(cuda_DeviceMemory* self) {
 
   trace("TRACE cuda_DeviceMemory_dealloc: %0x (%0x)\n", (int) self, (int) self->d_ptr);
 
-  if (self->d_ptr != NULL)  {
+  Py_XDECREF(self->a_dtype);
+  self->ob_type->tp_free((PyObject*)self);
+
+  if (self->d_ptr != NULL) 
     if (cuda_error(cublasFree(self->d_ptr), "dealloc:cublasFree"))
       return;
-    else
-      self->ob_type->tp_free((PyObject*)self);
-  }
 }
 
 
@@ -35,6 +33,7 @@ cuda_DeviceMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     self->a_ndims = 0;
     self->a_dims[0] = 0;
     self->a_dims[1] = 0;
+    self->a_dtype = NULL;
     self->a_flags = 0; 
   }
   
@@ -42,46 +41,67 @@ cuda_DeviceMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 }
 
 
-/************************************
- * numpy array to cuda device memory
- * constructor takes a numpy array 
- * returns a cuda DeviceMemory object 
- ************************************/
+/*********************************************************************
+ * numpy array to cuda device memory constructor: 
+ *  takes a numpy array
+ *  an optional dtype in numpy format
+ *  returns a cuda DeviceMemory copy of the array suitable for cublas
+ *********************************************************************/
 
 static int
 cuda_DeviceMemory_init(cuda_DeviceMemory *self, PyObject *args, PyObject *kwds) {
+  
   PyObject *object = NULL;
   PyArrayObject *array = NULL;
+  PyArray_Descr *dtype = NULL;
+  static char *kwlist [] = {"object", "dtype", NULL};
 
   // in case we are re-initing __init__ free old memory 
   if (self->d_ptr != NULL && cuda_error(cublasFree(self->d_ptr), "init:cublasFree"))
     return -1;
 
-  if (PyArg_ParseTuple(args, "O", &object)) {
+  if (self->a_dtype != NULL) { Py_DECREF(self->a_dtype); }
+
+  //if (PyArg_ParseTuple(args, "O|O&", &object, PyArray_DescrConverter, &dtype)) {
+  if (PyArg_ParseTupleAndKeywords(args, kwds, "O|O&", kwlist, &object, PyArray_DescrConverter, &dtype)) {
+
+    // default typecast
+    if (dtype == NULL) dtype = PyArray_DescrFromType(NPY_FLOAT32);
+    Py_INCREF(dtype);
+
+    // TODO: check acceptable data types
+    trace("TRACE cuda_DeviceMemory_init: dtype: elsize: %d domain: %s\n", 
+          dtype->elsize, PyTypeNum_ISCOMPLEX(dtype->type_num) ? "complex" : "real");
 
     Py_INCREF(object);
-    // cast supplied initialiser to a numpy array in required format
-    array = (PyArrayObject*) PyArray_FROM_OTF(object, NPY_FLOAT32, NPY_FORTRAN | NPY_ALIGNED);
+    // cast supplied initialiser to a numpy array in required format checking dimensions
+    array = (PyArrayObject*) PyArray_FromAny(object, dtype, 
+                                             DEVICE_ARRAY_MINDIMS, DEVICE_ARRAY_MAXDIMS, 
+                                             NPY_FORTRAN | NPY_ALIGNED, NULL);
     Py_DECREF(object);
-    if (array == NULL) return -1;
-    
-    else {
+
+    if (array == NULL) {
+      return -1;
+      Py_DECREF(dtype);
+
+    } else {
       // get and check array vital statistics for allocation of cuda device memory
       npy_intp *dims = PyArray_DIMS(array);
       int ndims = PyArray_NDIM(array);
 
-      // may lift this restriction in time
-      if (ndims < 1 || ndims > 2) {
-        PyErr_SetString(PyExc_TypeError, "number of array dimensions must be 1 or 2");
-        Py_DECREF(array);
-        return -1;
-      }
+      // may lift this restriction in time - now checked in PyArray_FromAny
+      //if (ndims < 1 || ndims > 2) {
+      //  PyErr_SetString(PyExc_TypeError, "number of array dimensions must be 1 or 2");
+      //  Py_DECREF(array);
+      //  return -1;
+      //}
 
       // init 
       self->a_ndims = ndims;
       self->a_dims[0] = dims[0];
       self->a_dims[1] = dims[1];
-      self->e_size = FLOAT32_BYTES;
+      self->e_size = dtype->elsize;
+
       int n_elements = a_elements(self);
 
       // alloc
@@ -90,19 +110,22 @@ cuda_DeviceMemory_init(cuda_DeviceMemory *self, PyObject *args, PyObject *kwds) 
       if (cuda_error(cublasAlloc(n_elements, self->e_size, (void**)&self->d_ptr), 
                      "init:cublasAlloc")) {
         Py_DECREF(array);
+        Py_DECREF(dtype);
         return -1;
       }
 
       // copy data from initialiser to device memory
-
       void* source = PyArray_DATA(array);
       
       if (cuda_error(cublasSetVector(n_elements, self->e_size, source, 1, self->d_ptr, 1), 
                      "init:cublasSetVector")) {
         Py_DECREF(array);
+        Py_DECREF(dtype);
         return -1;
       }
-      
+
+      // finally update dtype in self
+      self->a_dtype = dtype;
       return 0;
     }
   } else return -1;
@@ -113,16 +136,23 @@ cuda_DeviceMemory_init(cuda_DeviceMemory *self, PyObject *args, PyObject *kwds) 
 
 static inline PyObject *
 _stringify(cuda_DeviceMemory *self) {
-  return PyString_FromFormat("<%s (0x%0x: %d X %d  %s %s (%d) %s) @0x%0x>",
-                             self->ob_type->tp_name,
-                             (int)self->d_ptr,
-                             self->a_dims[0],
-                             self->a_dims[1],
-                             (self->a_flags & COMPLEX_TYPE) ? "complex" : "real",
-                             (self->a_flags & DOUBLE_TYPE) ? "double" : "single",
-                             self->e_size,
-                             (self->a_ndims == 2) ? "matrix" : (self->a_ndims == 1 ? "vector" : "scalar"),
-                             (int)self);
+  if (self->a_ndims == 2)
+    return PyString_FromFormat("<%s %p %s%d matrix(%d,%d) @%p>",
+                               self->ob_type->tp_name,
+                               self->d_ptr,
+                               PyTypeNum_ISCOMPLEX(self->a_dtype->type_num) ? "complex" : "float",
+                               self->e_size * 8,
+                               self->a_dims[0],
+                               self->a_dims[1],
+                               self);
+  else
+    return PyString_FromFormat("<%s %p %s%d vector(%d) @%p>",
+                               self->ob_type->tp_name,
+                               self->d_ptr,
+                               PyTypeNum_ISCOMPLEX(self->a_dtype->type_num) ? "complex" : "float",
+                               self->e_size * 8,
+                               self->a_dims[0],
+                               self);
 }
 
 static PyObject*
@@ -143,27 +173,23 @@ cuda_DeviceMemory_getShape(cuda_DeviceMemory *self, void *closure) {
   else return Py_BuildValue("(i)", self->a_dims[0]);
 }
 
+static PyObject*
+cuda_DeviceMemory_getDtype(cuda_DeviceMemory *self, void *closure) {
+  return Py_BuildValue("O", self->a_dtype);
+}
+
 /***********************************
  * expose basic informational slots 
  ***********************************/
 
 static PyMemberDef cuda_DeviceMemory_members[] = {
-  {"dsize", T_INT, offsetof(cuda_DeviceMemory, e_size), READONLY,
+  {"elsize", T_INT, offsetof(cuda_DeviceMemory, e_size), READONLY,
    "Size of each device array element"},
   {NULL}
 };
 
 
-/************************************
- * cuda device memory to numpy array
- ************************************/
-
-static inline 
-int toNumpyType(int flags) {
-  return (flags & COMPLEX_TYPE) ?
-    ((flags & DOUBLE_TYPE) ? PyArray_COMPLEX128 : PyArray_COMPLEX64) :
-    ((flags & DOUBLE_TYPE) ? PyArray_FLOAT64 : PyArray_FLOAT32);
-}
+/* create a numpy host array from cuda device array */
 
 static PyObject*
 cuda_DeviceMemory_2numpyArray(cuda_DeviceMemory *self, PyObject *args) {
@@ -173,10 +199,7 @@ cuda_DeviceMemory_2numpyArray(cuda_DeviceMemory *self, PyObject *args) {
   dims[1] = self->a_dims[1];
 
   // create a numpy array to hold the data
-  PyObject *array = PyArray_EMPTY(self->a_ndims, dims, 
-                                  //toNumpyType(self->a_flags),
-                                  PyArray_FLOAT32,
-                                  1);
+  PyObject *array = PyArray_Empty(self->a_ndims, dims, self->a_dtype, 1);
   if (array != NULL) {
     // fill it in
     if (cuda_error(cublasGetVector (a_elements(self), self->e_size, 
@@ -196,18 +219,20 @@ cuda_DeviceMemory_2numpyArray(cuda_DeviceMemory *self, PyObject *args) {
  **************/
 
 static PyMethodDef cuda_DeviceMemory_methods[] = {
-  {"nuarray", (PyCFunction) cuda_DeviceMemory_2numpyArray, METH_VARARGS,
-   "convert to a numpy array."},
+  {"toarray", (PyCFunction) cuda_DeviceMemory_2numpyArray, METH_VARARGS,
+   "copy cuda device array to a host numpy array."},
   {NULL, NULL, 0, NULL} 
 };
 
 /**********************
  * getters and setters
  *********************/
+
 static PyGetSetDef cuda_DeviceMemory_properties[] = {
   {"shape", (getter) cuda_DeviceMemory_getShape, (setter) NULL, 
    "shape of device array", NULL},
-  // TODO numpy style dtype?
+  {"dtype", (getter) cuda_DeviceMemory_getDtype, (setter) NULL, 
+   "dtype of device array", NULL},
   {NULL}
 };
 

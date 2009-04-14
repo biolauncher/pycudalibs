@@ -24,7 +24,7 @@ cublas = Extension('_cublas',
                    define_macros = [('MAJOR_VERSION', '0'),
                                     ('MINOR_VERSION', '1'),
                                     ('DEBUG', '1')],
-                   include_dirs = ['.', cudainclude],
+                   include_dirs = ['.', cudainclude, numpyinclude],
                    libraries = ['cublas'],
                    library_dirs = [cudalib],
                    sources = ['pycublas.c'])

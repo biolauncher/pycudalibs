@@ -10,6 +10,8 @@
 #define _PYCUNUMPY_H 1
 #include <Python.h>
 #include <cublas.h>
+#include <structmember.h>
+#include <arrayobject.h>
 
 #if DEBUG > 0
 #include <stdio.h>
@@ -30,14 +32,11 @@
 #define CUDA_ERROR_TYPE_SYM_NAME "ERROR"
 
 
-#define DEVICE_MEMORY_MAXDIMS 2 
-#define FLOAT32_BYTES 4
-#define FLOAT64_BYTES 8
-#define COMPLEX32_BYTES 8
-#define COMPLEX64_BYTES 16
+#define DEVICE_ARRAY_MAXDIMS 2 
+#define DEVICE_ARRAY_MINDIMS 1
 
-#define COMPLEX_TYPE 1
-#define DOUBLE_TYPE 2
+#define DEVICE_ARRAY_TYPE_OK(dt) ((PyTypeNum_ISCOMPLEX((dt)->type_num) && ((dt)->elsize == 8 || (dt)->elsize == 16)) \
+                                  || (PyTypeNum_ISFLOAT((dt)->type_num) && ((dt)->elsize == 4 || (dt)->elsize == 8)))
 
 /* A python base class to encapsulate CUDA device memory. Fortran array semantics apply.  */
 
@@ -45,9 +44,10 @@ typedef struct {
   PyObject_HEAD
   void* d_ptr;                       /* opaque device pointer */
   int a_ndims;                       /* number of dimensions */
-  int a_dims[DEVICE_MEMORY_MAXDIMS]; /* dimensions */
+  int a_dims[DEVICE_ARRAY_MAXDIMS];  /* dimensions */
   int e_size;                        /* sizeof element */
-  int a_flags;
+  PyArray_Descr* a_dtype;            /* keep reference to numpy dtype */
+  int a_flags;                       /* this reserved */
 } cuda_DeviceMemory;
 
 /* return number of elements: matrix, vector or scalar */
@@ -71,7 +71,7 @@ static char* cublas_error_text [] = {
   "An internal CUBLAS operation failed"};
 
 #if defined(CUNUMPY_MODULE)
-/* module definition only - see: pycuda.c */
+/* module definition only - see: pycunumpy.c */
 
 #else
 
