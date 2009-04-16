@@ -34,7 +34,7 @@ cuda_DeviceMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     self->a_dims[0] = 0;
     self->a_dims[1] = 0;
     self->a_dtype = NULL;
-    self->a_flags = 0; 
+    self->a_transposed = 0; 
   }
   
   return (PyObject *)self;

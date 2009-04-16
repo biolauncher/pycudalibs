@@ -5,11 +5,5 @@
 #define _PYCUBLAS_H 1
 #include <pycunumpy.h>
 
-/* Python callable functions in the CUDA BLAS api */
-
-static PyObject* init(PyObject* self, PyObject* args); 
-static PyObject* shutdown(PyObject* self, PyObject* args); 
-static PyObject* sgemm(PyObject* self, PyObject* args);
-
 
 #endif

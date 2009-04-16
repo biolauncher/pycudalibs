@@ -47,7 +47,7 @@ typedef struct {
   int a_dims[DEVICE_ARRAY_MAXDIMS];  /* dimensions */
   int e_size;                        /* sizeof element */
   PyArray_Descr* a_dtype;            /* keep reference to numpy dtype */
-  int a_flags;                       /* this reserved */
+  int a_transposed;                  /* this reserved for future use */
 } cuda_DeviceMemory;
 
 /* return number of elements: matrix, vector or scalar */
@@ -59,7 +59,7 @@ static inline int a_elements(cuda_DeviceMemory* d) {
 /* module based exception */
 static PyObject* cuda_exception;
 
-/* Lookup of cublas error since we use CUBLAS routines in _cuda module for allocation */
+/* lookup of cublas error text */
 
 static char* cublas_error_text [] = {
   "CUBLAS library not initialized",

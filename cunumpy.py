@@ -26,19 +26,31 @@ class CudaArray(_cunumpy.array):
         """
         # 1. check type of other is same as self - may relax this one day
         if not isinstance(other, _cunumpy.array) or not self.dtype == other.dtype:
-            raise TypeError("argument array is not a compatible type")
+            raise TypeError("argument array is not a compatible type: " + other.dtype + " expected: " + self.dtype)
             
         # 2. make sure shapes are compatible - or just let the lower levels barf?
         #m = self.shape[1]
         #if m != other.shape[0]: 
         #    raise TypeError... 
+
         # 3. construct a suitable result array
         n = self.shape[0]
         k = other.shape[1]
         c = zeros([n,k], dtype=self.dtype)
-        # 4. select appropriate blas routine based on shape/kind
-        return _cublas.sgemm('n','n',1.0, self, other, 0.0, c)
 
+        # 4. select appropriate blas routine based on shape/kind
+        if self.dtype.kind == 'c':
+            if self.elsize == 8:
+                return _cublas.cgemm('n', 'n', 1.0, self, other, 0.0, c)
+            elif self.elsize == 16:
+                return _cublas.zgemm('n', 'n', 1.0, self, other, 0.0, c)
+        elif self.dtype.kind == 'f':
+            if self.elsize == 4:
+                return _cublas.sgemm('n', 'n', 1.0, self, other, 0.0, c)
+            elif self.elsize == 8:
+                return _cublas.dgemm('n', 'n', 1.0, self, other, 0.0, c)
+        # drop thru and throw a type error
+        raise TypeError("array has unsuported type for cublas inner product")
 
 #
 # functions to provide numpy like factory methods for cunumpy.array objects
