@@ -357,10 +357,11 @@ static PyObject* cdotu(PyObject* self, PyObject* args) {
     if (cublas_error("cdotu")) 
       return NULL;
     else {
+
       Py_complex ip;
-      ip.real = cip.x;
-      ip.imag = cip.y;
-      return Py_BuildValue("D", ip);
+      ip.real = (double) cip.x;
+      ip.imag = (double) cip.y;
+      return Py_BuildValue("D", &ip);
     }
   } else {
     return NULL;
@@ -400,9 +401,10 @@ static PyObject* cdotc(PyObject* self, PyObject* args) {
       return NULL;
     else {
       Py_complex ip;
-      ip.real = cip.x;
-      ip.imag = cip.y;
-      return Py_BuildValue("D", ip);
+      ip.real = (double) cip.x;
+      ip.imag = (double) cip.y;
+      //trace("cip: (%f,%f) -> ip: (%f,%f)\n", cip.x, cip.y, ip.real, ip.imag);
+      return Py_BuildValue("D", &ip);
     }
   } else {
     return NULL;
