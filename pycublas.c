@@ -250,6 +250,166 @@ static PyObject* zgemm(PyObject* self, PyObject* args) {
   }
 }
 
+/*
+sdot - single precision real vector-vector dot product
+returns a python float
+*/
+
+static PyObject* sdot(PyObject* self, PyObject* args) {
+  cuda_DeviceMemory *A, *B;
+    
+  if (PyArg_ParseTuple(args, "O!O!", 
+                       cuda_DeviceMemoryType, &A, 
+                       cuda_DeviceMemoryType, &B)) {
+
+    int lda = A->a_dims[0];
+    int ldb = B->a_dims[0];
+
+    // do some shape checking here
+    if (lda != ldb) {
+      PyErr_SetString(PyExc_ValueError, "vectors have different dimensions");
+      return NULL;
+    }
+    /*
+      float 
+      cublasSdot (int n, const float *x, int incx, const float *y, int incy) 
+    */
+
+    float ip = cublasSdot(lda, A->d_ptr, 1, B->d_ptr, 1);
+
+    if (cublas_error("sdot")) 
+      return NULL;
+    else 
+      return Py_BuildValue("f", ip);
+  
+  } else {
+    return NULL;
+  }
+}
+
+/*
+ddot - double precision real vector-vector dot product
+returns a python double
+*/
+
+static PyObject* ddot(PyObject* self, PyObject* args) {
+  cuda_DeviceMemory *A, *B;
+    
+  if (PyArg_ParseTuple(args, "O!O!", 
+                       cuda_DeviceMemoryType, &A, 
+                       cuda_DeviceMemoryType, &B)) {
+
+    int lda = A->a_dims[0];
+    int ldb = B->a_dims[0];
+
+    // do some shape checking here
+    if (lda != ldb) {
+      PyErr_SetString(PyExc_ValueError, "vectors have different dimensions");
+      return NULL;
+    }
+
+    /*
+      double
+      cublasDdot (int n, const double *x, int incx, const double *y, int incy) 
+    */
+
+    double ip = cublasDdot(lda, A->d_ptr, 1, B->d_ptr, 1);
+
+    if (cublas_error("ddot")) 
+      return NULL;
+    else 
+      return Py_BuildValue("d", ip);
+  
+  } else {
+    return NULL;
+  }
+}
+
+
+/*
+cdotu - single precision complex vector-vector dot product
+returns a python complex
+*/
+
+static PyObject* cdotu(PyObject* self, PyObject* args) {
+  cuda_DeviceMemory *A, *B;
+    
+  if (PyArg_ParseTuple(args, "O!O!", 
+                       cuda_DeviceMemoryType, &A, 
+                       cuda_DeviceMemoryType, &B)) {
+
+    int lda = A->a_dims[0];
+    int ldb = B->a_dims[0];
+
+    // do some shape checking here
+    if (lda != ldb) {
+      PyErr_SetString(PyExc_ValueError, "vectors have different dimensions");
+      return NULL;
+    }
+
+    /*
+      cuComplex 
+      cublasCdotu (int n, const cuComplex *x, int incx, const cuComplex *y, int incy) 
+    */
+
+    cuComplex cip = cublasCdotu(lda, A->d_ptr, 1, B->d_ptr, 1);
+
+    if (cublas_error("cdotu")) 
+      return NULL;
+    else {
+      Py_complex ip;
+      ip.real = cip.x;
+      ip.imag = cip.y;
+      return Py_BuildValue("D", ip);
+    }
+  } else {
+    return NULL;
+  }
+}
+
+/*
+cdotc - single precision complex vector-vector dot product
+takes conjugate of first vector (A)
+returns a python complex
+*/
+
+static PyObject* cdotc(PyObject* self, PyObject* args) {
+  cuda_DeviceMemory *A, *B;
+    
+  if (PyArg_ParseTuple(args, "O!O!", 
+                       cuda_DeviceMemoryType, &A, 
+                       cuda_DeviceMemoryType, &B)) {
+
+    int lda = A->a_dims[0];
+    int ldb = B->a_dims[0];
+
+    // do some shape checking here
+    if (lda != ldb) {
+      PyErr_SetString(PyExc_ValueError, "vectors have different dimensions");
+      return NULL;
+    }
+
+    /*
+      cuComplex 
+      cublasCdotc (int n, const cuComplex *x, int incx, const cuComplex *y, int incy) 
+    */
+
+    cuComplex cip = cublasCdotc(lda, A->d_ptr, 1, B->d_ptr, 1);
+
+    if (cublas_error("cdotc")) 
+      return NULL;
+    else {
+      Py_complex ip;
+      ip.real = cip.x;
+      ip.imag = cip.y;
+      return Py_BuildValue("D", ip);
+    }
+  } else {
+    return NULL;
+  }
+}
+
+
 /************************
  * module function table
  ************************/
@@ -257,14 +417,27 @@ static PyObject* zgemm(PyObject* self, PyObject* args) {
 static PyMethodDef _cublas_methods[] = {
   {"init", init, METH_VARARGS, 
    "Initialise CUBLAS library by attaching to CUDA device that is bound to the calling host thread."},
+
   {"sgemm", sgemm, METH_VARARGS,
-   "Single Pecision BLAS3 float matrix matrix multiply: C = alpha * op(A) * op(B) + beta * C"},
+   "Single Precision BLAS3 float matrix multiply: C = alpha * op(A) * op(B) + beta * C"},
   {"cgemm", cgemm, METH_VARARGS,
-   "Single Pecision BLAS3 complex matrix multiply: C = alpha * op(A) * op(B) + beta * C"},
+   "Single Precision BLAS3 complex matrix multiply: C = alpha * op(A) * op(B) + beta * C"},
   {"dgemm", dgemm, METH_VARARGS,
-   "Double Pecision BLAS3 real matrix multiply: C = alpha * op(A) * op(B) + beta * C"},
+   "Double Precision BLAS3 real matrix multiply: C = alpha * op(A) * op(B) + beta * C"},
   {"zgemm", zgemm, METH_VARARGS,
-   "Double Pecision BLAS3 complex matrix multiply: C = alpha * op(A) * op(B) + beta * C"},
+   "Double Precision BLAS3 complex matrix multiply: C = alpha * op(A) * op(B) + beta * C"},
+
+  {"sdot", sdot, METH_VARARGS,
+   "Single Precision BLAS1 real vector dot product"},
+  {"ddot", ddot, METH_VARARGS,
+   "Double Precision BLAS1 real vector dot product"},
+
+  {"cdotu", cdotu, METH_VARARGS,
+   "Double Precision BLAS1 complex vector dot product"},
+  {"cdotc", cdotc, METH_VARARGS,
+   "Double Precision BLAS1 complex vector transpose dot product "},
+
+
   {"close", shutdown, METH_VARARGS,
    "Releases CPU‐side resources used by the CUBLAS library."},
   {NULL, NULL, 0, NULL}

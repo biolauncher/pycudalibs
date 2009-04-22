@@ -99,7 +99,8 @@ cuda_DeviceMemory_init(cuda_DeviceMemory *self, PyObject *args, PyObject *kwds) 
       // init 
       self->a_ndims = ndims;
       self->a_dims[0] = dims[0];
-      self->a_dims[1] = dims[1];
+      // make sure vectors are conventionally n*1 (column vectors) self->a_dims[1] = dims[1];
+      self->a_dims[1] = ndims == 1 ? 1 : dims[1];
       self->e_size = dtype->elsize;
 
       int n_elements = a_elements(self);
@@ -183,8 +184,10 @@ cuda_DeviceMemory_getDtype(cuda_DeviceMemory *self, void *closure) {
  ***********************************/
 
 static PyMemberDef cuda_DeviceMemory_members[] = {
-  {"elsize", T_INT, offsetof(cuda_DeviceMemory, e_size), READONLY,
+  {"itemsize", T_INT, offsetof(cuda_DeviceMemory, e_size), READONLY,
    "Size of each device array element"},
+  {"ndim", T_INT, offsetof(cuda_DeviceMemory, a_ndims), READONLY,
+   "Number of array dimensions"},
   {NULL}
 };
 
