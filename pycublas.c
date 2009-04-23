@@ -48,11 +48,26 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
                        cuda_DeviceMemoryType, &B, 
                        &beta, cuda_DeviceMemoryType, &C)) {
 
+    // new setup for index twiddling transpose
+    int m = transa == 't' ? A->a_dims[1] : A->a_dims[0];
+    int k = transa == 't' ? A->a_dims[0] : A->a_dims[1]; 
+    int kb = transb == 't' ? B->a_dims[1] : B->a_dims[0];
+    int n = transb == 't' ? B->a_dims[0] : B->a_dims[1];
+    int mc = C->a_dims[0];
+    int nc = C->a_dims[1];
+
+    // check we are all square
+    if (k != kb || m != mc || n != nc) {
+      PyErr_SetString(PyExc_ValueError, "matrices have wrong shapes for matrix-matrix mutiplication");
+      return NULL;
+    }
+
     int lda = A->a_dims[0];
     int ldb = B->a_dims[0];
     int ldc = C->a_dims[0];
 
     // do some shape checking here
+    /*
     if (A->a_dims[1] != B->a_dims[0] ||
         A->a_dims[0] != C->a_dims[0] ||
         C->a_dims[1] != B->a_dims[1]) {
@@ -60,6 +75,7 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
       PyErr_SetString(PyExc_ValueError, "matrices have wrong shapes for matrix-matrix mutiplication");
       return NULL;
     }
+    */
     /*
       void 
       cublasSgemm (char transa, char transb, int m, int n, 
@@ -67,8 +83,7 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
                    const float *B, int ldb, float beta, 
                    float *C, int ldc)
     */
-    cublasSgemm(transa, transb, A->a_dims[0], B->a_dims[1], A->a_dims[1], 
-                alpha, A->d_ptr, lda, B->d_ptr, ldb, beta, C->d_ptr, ldc);
+    cublasSgemm(transa, transb, m, n, k, alpha, A->d_ptr, lda, B->d_ptr, ldb, beta, C->d_ptr, ldc);
 
     if (cublas_error("sgemm")) 
       return NULL;

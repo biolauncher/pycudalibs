@@ -115,6 +115,118 @@ class CudaArray(_cunumpy.array):
         else:
             raise ValueError("array has invalid number of dimensions for matrix dot product")
 
+    def dot2(self, other):
+        """
+        inner product of self with other using cublas.sgemm treats everything as arrays
+        """
+        # 1a check array is of permitted types
+        if not self.dtype in array_types:
+            raise ValueError("array does not have supported dtype")
+
+        # 1b check type of other is same as self - may relax this one day
+        if not isinstance(other, _cunumpy.array) or not self.dtype == other.dtype:
+            raise ValueError("argument array is not a compatible dtype")
+        
+        # 2. vector-*
+        # we transpose default column vectors into left row vector for the operation
+
+        if self.ndim == 1:
+            n = 1
+
+            if other.ndim == 1:
+                # vector-vector
+
+                k = 1
+                c = zeros([n,k], dtype=self.dtype)
+
+                if self.dtype.kind == 'f':
+                    if self.itemsize == 4:
+                        return _cublas.sgemm('t', 'n', 1.0, self, other, 0.0, c)
+                    elif self.itemsize == 8:
+                        return _cublas.dgemm('t', 'n', 1.0, self, other, 0.0, c)
+
+
+                elif self.dtype.kind == 'c':
+                    if self.itemsize == 8:
+                        return _cublas.cgemm('t', 'n', 1.0, self, other, 0.0, c)
+                    elif self.itemsize == 16:
+                        return _cublas.zgemm('t', 'n', 1.0, self, other, 0.0, c)
+
+            elif other.ndim == 2:
+                # vector-matrix
+
+                k = other.shape[1]
+                c = zeros([n,k], dtype=self.dtype)
+
+                if self.dtype.kind == 'f':
+
+                    if self.itemsize == 4:
+                        return _cublas.sgemm('t', 'n', 1.0, self, other, 0.0, c)
+                    elif self.itemsize == 8:
+                        return _cublas.dgemm('t', 'n', 1.0, self, other, 0.0, c)
+
+
+                elif self.dtype.kind == 'c':
+                    if self.itemsize == 8:
+                        return _cublas.cgemm('t', 'n', 1.0, self, other, 0.0, c)
+                    elif self.itemsize == 16:
+                        return _cublas.zgemm('t', 'n', 1.0, self, other, 0.0, c)
+                
+            else:
+                raise ValueError("argument array has invalid number of dimensions for vector dot product")
+
+        # matrix-*
+        elif self.ndim == 2:
+            n = self.shape[0]
+            
+            if other.ndim == 1:
+                # matrix-vector
+
+                k = 1
+                c = zeros([n,k], dtype=self.dtype)
+
+                if self.dtype.kind == 'f':
+
+                    if self.itemsize == 4:
+                        return _cublas.sgemm('n', 'n', 1.0, self, other, 0.0, c)
+                    elif self.itemsize == 8:
+                        return _cublas.dgemm('n', 'n', 1.0, self, other, 0.0, c)
+
+
+                elif self.dtype.kind == 'c':
+                    if self.itemsize == 8:
+                        return _cublas.cgemm('n', 'n', 1.0, self, other, 0.0, c)
+                    elif self.itemsize == 16:
+                        return _cublas.zgemm('n', 'n', 1.0, self, other, 0.0, c)
+
+
+            elif other.ndim == 2:
+                # matrix-matrix
+
+                k = other.shape[1]
+                c = zeros([n,k], dtype=self.dtype)
+
+                # 4. select appropriate blas routine based on shape/kind
+                if self.dtype.kind == 'c':
+
+                    if self.itemsize == 8:
+                        return _cublas.cgemm('n', 'n', 1.0, self, other, 0.0, c)
+                    elif self.itemsize == 16:
+                        return _cublas.zgemm('n', 'n', 1.0, self, other, 0.0, c)
+
+                elif self.dtype.kind == 'f':
+
+                    if self.itemsize == 4:
+                        return _cublas.sgemm('n', 'n', 1.0, self, other, 0.0, c)
+                    elif self.itemsize == 8:
+                        return _cublas.dgemm('n', 'n', 1.0, self, other, 0.0, c)
+
+            else:
+                raise ValueError("argument array has invalid number of dimensions for matrix dot product")
+
+        else:
+            raise ValueError("array has invalid number of dimensions for matrix dot product")
+
 #
 # functions to provide numpy like factory methods for cunumpy.array objects
 #
