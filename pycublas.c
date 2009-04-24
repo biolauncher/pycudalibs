@@ -56,7 +56,7 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
     int mc = C->a_dims[0];
     int nc = C->a_dims[1];
 
-    // check we are all square
+    // check geometry is good
     if (k != kb || m != mc || n != nc) {
       PyErr_SetString(PyExc_ValueError, "matrices have wrong shapes for matrix-matrix mutiplication");
       return NULL;
@@ -66,16 +66,6 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
     int ldb = B->a_dims[0];
     int ldc = C->a_dims[0];
 
-    // do some shape checking here
-    /*
-    if (A->a_dims[1] != B->a_dims[0] ||
-        A->a_dims[0] != C->a_dims[0] ||
-        C->a_dims[1] != B->a_dims[1]) {
-
-      PyErr_SetString(PyExc_ValueError, "matrices have wrong shapes for matrix-matrix mutiplication");
-      return NULL;
-    }
-    */
     /*
       void 
       cublasSgemm (char transa, char transb, int m, int n, 
