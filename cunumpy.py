@@ -133,13 +133,13 @@ class CudaArray(_cunumpy.array):
             raise ValueError("argument array is not a compatible dtype")
         
         # 2. vector-*
-        # we transpose default column vectors into left row vector for the operation
+        # we transpose default (conventional) column vectors into left row vector for the operation
 
         if self.ndim == 1:
             n = 1
 
             if other.ndim == 1:
-                # vector-vector
+                # vector-vector - need to return a scalar
 
                 k = 1
                 c = zeros([n,k], dtype=self.dtype)
@@ -158,8 +158,8 @@ class CudaArray(_cunumpy.array):
                         return _cublas.zgemm('t', 'n', 1.0, self, other, 0.0, c)
 
             elif other.ndim == 2:
-                # vector-matrix
-
+                # vector-matrix - need to construct a standard vector
+                
                 k = other.shape[1]
                 c = zeros([n,k], dtype=self.dtype)
 
@@ -185,10 +185,11 @@ class CudaArray(_cunumpy.array):
             n = self.shape[0]
             
             if other.ndim == 1:
-                # matrix-vector
 
+                # matrix-vector - we arrange to return a row vector here as this is 
+                # the numpy (and our) convention. See vector-matrix tricks above.
                 k = 1
-                c = zeros([n,k], dtype=self.dtype)
+                c = zeros([n], dtype=self.dtype)
 
                 if self.dtype.kind == 'f':
 
