@@ -33,7 +33,7 @@ class TestDotProduct2(unittest.TestCase):
         na = np.array(self.real_veca, dtype=np.float32)
         nb = np.array(self.real_vecb, dtype=np.float32)
         nc = np.dot(na,nb)
-        self.assert_(scalars_equal(vc, nc, epsilon=0.05))
+        self.assert_(arrays_equal(vc.toarray(), nc, epsilon=0.05))
 
     def test_real_double_vector_vector_dot2(self):
         va = cn.array(self.real_veca, dtype=cn.float64)
@@ -43,7 +43,7 @@ class TestDotProduct2(unittest.TestCase):
         na = np.array(self.real_veca, dtype=np.float64)
         nb = np.array(self.real_vecb, dtype=np.float64)
         nc = np.dot(na,nb)
-        self.assert_(scalars_equal(vc, nc, epsilon=0.0001))
+        self.assert_(arrays_equal(vc.toarray(), nc, epsilon=0.0001))
 
 
     def test_complex_single_vector_vector_dot2(self):
@@ -54,7 +54,7 @@ class TestDotProduct2(unittest.TestCase):
         na = np.array(self.complex_veca, dtype=np.complex64)
         nb = np.array(self.complex_vecb, dtype=np.complex64)
         nc = np.dot(na,nb)
-        self.assert_(scalars_equal(vc, nc, epsilon=0.05))
+        self.assert_(arrays_equal(vc.toarray(), nc, epsilon=0.05))
 
 
     def test_complex_double_vector_vector_dot2(self):
@@ -65,7 +65,7 @@ class TestDotProduct2(unittest.TestCase):
         na = np.array(self.complex_veca, dtype=np.complex128)
         nb = np.array(self.complex_vecb, dtype=np.complex128)
         nc = np.dot(na,nb)
-        self.assert_(scalars_equal(vc, nc, epsilon=0.0001))
+        self.assert_(arrays_equal(vc.toarray(), nc, epsilon=0.0001))
 
 
     # vector-matrix dot2 products

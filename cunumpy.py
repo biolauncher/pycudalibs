@@ -73,13 +73,18 @@ class CudaArray(_cunumpy.array):
         elif self.ndim == 2:
 
             if other.ndim == 1:
+
+                n = self.shape[0]
+                k = 1
+                c = zeros([n], dtype=self.dtype)
+
                 # matrix-vector
                 if self.dtype.kind == 'f':
 
                     if self.itemsize == 4:
-                        return _cublas.sgemv(self, other)
+                        return _cublas.sgemv('n', 1.0, self, other, 0.0, c)
                     elif self.itemsize == 8:
-                        return _cublas.dgemv(self, other)
+                        return _cublas.dgemv('n', 1.0, self, other, 0.0, c)
 
                 elif self.dtype.kind == 'c':
                     if self.itemsize == 8:

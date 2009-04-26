@@ -103,27 +103,33 @@ static PyObject* dgemm(PyObject* self, PyObject* args) {
                        cuda_DeviceMemoryType, &B, 
                        &beta, cuda_DeviceMemoryType, &C)) {
 
+    // new setup for index twiddling transpose
+    int m = transa == 't' ? A->a_dims[1] : A->a_dims[0];
+    int k = transa == 't' ? A->a_dims[0] : A->a_dims[1]; 
+    int kb = transb == 't' ? B->a_dims[1] : B->a_dims[0];
+    int n = transb == 't' ? B->a_dims[0] : B->a_dims[1];
+    int mc = C->a_dims[0];
+    int nc = C->a_dims[1];
+
+    // check geometry is good
+    if (k != kb || m != mc || n != nc) {
+      PyErr_SetString(PyExc_ValueError, "matrices have wrong shapes for matrix-matrix mutiplication");
+      return NULL;
+    }
+
     int lda = A->a_dims[0];
     int ldb = B->a_dims[0];
     int ldc = C->a_dims[0];
 
-    // do some shape checking here
-    if (A->a_dims[1] != B->a_dims[0] ||
-        A->a_dims[0] != C->a_dims[0] ||
-        C->a_dims[1] != B->a_dims[1]) {
-
-      PyErr_SetString(PyExc_ValueError, "matrices have wrong shapes for matrix-matrix mutiplication");
-      return NULL;
-    }
+    
     /*
       void 
       cublasDgemm (char transa, char transb, int m, int n, 
-                   int k, float double, const double *A, int lda, 
+                   int k, double alpha, const double *A, int lda, 
                    const double *B, int ldb, double beta, 
                    double *C, int ldc)
     */
-    cublasDgemm(transa, transb, A->a_dims[0], B->a_dims[1], A->a_dims[1], 
-                alpha, A->d_ptr, lda, B->d_ptr, ldb, beta, C->d_ptr, ldc);
+    cublasDgemm(transa, transb, m, n, k, alpha, A->d_ptr, lda, B->d_ptr, ldb, beta, C->d_ptr, ldc);
 
     if (cublas_error("dgemm")) 
       return NULL;
@@ -153,9 +159,10 @@ static PyObject* cgemm(PyObject* self, PyObject* args) {
                        cuda_DeviceMemoryType, &B, 
                        &beta, cuda_DeviceMemoryType, &C)) {
 
-    /* N.B. unfortunately python only has a double precision complex type so we must cast with risk
-       here - in most of our usage of this routine we use 0 and 1 as parameters but this comment
-       is the only warning */
+    /* N.B. unfortunately python only has a double precision complex
+       type so we must cast with risk here - in most of our usage of
+       this routine we use 0 and 1 as alpha and beta parameters but
+       this comment is the only warning */
 
     cuComplex c_alpha;
     cuComplex c_beta;
@@ -165,18 +172,24 @@ static PyObject* cgemm(PyObject* self, PyObject* args) {
     c_beta.x = (float) alpha.real;
     c_beta.y = (float) alpha.imag;
 
+    // new setup for index twiddling transpose
+    int m = transa == 't' ? A->a_dims[1] : A->a_dims[0];
+    int k = transa == 't' ? A->a_dims[0] : A->a_dims[1]; 
+    int kb = transb == 't' ? B->a_dims[1] : B->a_dims[0];
+    int n = transb == 't' ? B->a_dims[0] : B->a_dims[1];
+    int mc = C->a_dims[0];
+    int nc = C->a_dims[1];
+
+    // check geometry is good
+    if (k != kb || m != mc || n != nc) {
+      PyErr_SetString(PyExc_ValueError, "matrices have wrong shapes for matrix-matrix mutiplication");
+      return NULL;
+    }
+
     int lda = A->a_dims[0];
     int ldb = B->a_dims[0];
     int ldc = C->a_dims[0];
 
-    // do some shape checking here
-    if (A->a_dims[1] != B->a_dims[0] ||
-        A->a_dims[0] != C->a_dims[0] ||
-        C->a_dims[1] != B->a_dims[1]) {
-
-      PyErr_SetString(PyExc_ValueError, "matrices have wrong shapes for matrix-matrix mutiplication");
-      return NULL;
-    }
     /*
       void 
       cublasCgemm (char transa, char transb, int m, int n, 
@@ -184,8 +197,7 @@ static PyObject* cgemm(PyObject* self, PyObject* args) {
                    int lda, const cuComplex *B, int ldb, 
                    cuComplex beta, cuComplex *C, int ldc) 
     */
-    cublasCgemm(transa, transb, A->a_dims[0], B->a_dims[1], A->a_dims[1], 
-                c_alpha, A->d_ptr, lda, B->d_ptr, ldb, c_beta, C->d_ptr, ldc);
+    cublasCgemm(transa, transb, m, n, k, c_alpha, A->d_ptr, lda, B->d_ptr, ldb, c_beta, C->d_ptr, ldc);
 
     if (cublas_error("cgemm")) 
       return NULL;
@@ -223,18 +235,24 @@ static PyObject* zgemm(PyObject* self, PyObject* args) {
     c_beta.x = alpha.real;
     c_beta.y = alpha.imag;
 
+    // new setup for index twiddling transpose
+    int m = transa == 't' ? A->a_dims[1] : A->a_dims[0];
+    int k = transa == 't' ? A->a_dims[0] : A->a_dims[1]; 
+    int kb = transb == 't' ? B->a_dims[1] : B->a_dims[0];
+    int n = transb == 't' ? B->a_dims[0] : B->a_dims[1];
+    int mc = C->a_dims[0];
+    int nc = C->a_dims[1];
+
+    // check geometry is good
+    if (k != kb || m != mc || n != nc) {
+      PyErr_SetString(PyExc_ValueError, "matrices have wrong shapes for matrix-matrix mutiplication");
+      return NULL;
+    }
+
     int lda = A->a_dims[0];
     int ldb = B->a_dims[0];
     int ldc = C->a_dims[0];
 
-    // do some shape checking here
-    if (A->a_dims[1] != B->a_dims[0] ||
-        A->a_dims[0] != C->a_dims[0] ||
-        C->a_dims[1] != B->a_dims[1]) {
-
-      PyErr_SetString(PyExc_ValueError, "matrices have wrong shapes for matrix-matrix mutiplication");
-      return NULL;
-    }
     /*
       void 
       cublasZgemm (char transa, char transb, int m, int n, 
@@ -242,8 +260,7 @@ static PyObject* zgemm(PyObject* self, PyObject* args) {
                    int lda, const cuDoubleComplex *B, int ldb, 
                    cuDoubleComplex beta, cuDoubleComplex *C, int ldc) 
     */
-    cublasZgemm(transa, transb, A->a_dims[0], B->a_dims[1], A->a_dims[1], 
-                c_alpha, A->d_ptr, lda, B->d_ptr, ldb, c_beta, C->d_ptr, ldc);
+    cublasZgemm(transa, transb, m, n, k, c_alpha, A->d_ptr, lda, B->d_ptr, ldb, c_beta, C->d_ptr, ldc);
 
     if (cublas_error("zgemm")) 
       return NULL;
@@ -291,6 +308,59 @@ static PyObject* sdot(PyObject* self, PyObject* args) {
     return NULL;
   }
 }
+
+
+/*
+sgemv - single precision real matrix-vector multiply
+transa, alpha, A, B, beta, C
+return the updated array C 
+*/
+
+static PyObject* sgemv(PyObject* self, PyObject* args) {
+  cuda_DeviceMemory *A, *B, *C;
+  float alpha, beta;
+  char transa;
+
+  if (PyArg_ParseTuple(args, "cfO!O!fO!", 
+                       &transa, &alpha, 
+                       cuda_DeviceMemoryType, &A, 
+                       cuda_DeviceMemoryType, &B, &beta, 
+                       cuda_DeviceMemoryType, &C)) {
+
+    // new setup for index twiddling transpose
+    int m = transa == 't' ? A->a_dims[1] : A->a_dims[0];
+    int k = transa == 't' ? A->a_dims[0] : A->a_dims[1]; 
+    int kb = B->a_dims[0];
+    int n = B->a_dims[1];
+    int mc = C->a_dims[0];
+    int nc = C->a_dims[1];
+
+    // check geometry is good
+    if (k != kb || m != mc || n != nc) {
+      PyErr_SetString(PyExc_ValueError, "matrices have wrong shapes for matrix-vector mutiplication");
+      return NULL;
+    }
+
+    int lda = A->a_dims[0];
+
+    /*
+     void 
+     cublasSgemv (char trans, int m, int n, float alpha, 
+                  const float *A, int lda, const float *x,  
+                  int incx, float beta, float *y, int incy)
+    */
+    cublasSgemv(transa, m, n, alpha, A->d_ptr, lda, B->d_ptr, 1, beta, C->d_ptr, 1);
+
+    if (cublas_error("sgemv")) 
+      return NULL;
+    else 
+      return Py_BuildValue("O", C);
+  
+  } else {
+    return NULL;
+  }
+}
+
 
 /*
 ddot - double precision real vector-vector dot product
@@ -433,6 +503,10 @@ static PyMethodDef _cublas_methods[] = {
    "Double Precision BLAS3 real matrix multiply: C = alpha * op(A) * op(B) + beta * C"},
   {"zgemm", zgemm, METH_VARARGS,
    "Double Precision BLAS3 complex matrix multiply: C = alpha * op(A) * op(B) + beta * C"},
+
+  {"sgemv", sgemv, METH_VARARGS,
+   "Single Precision BLAS2 float matrix vector multiply: C = alpha * op(A) * B + beta * C"},
+
 
   {"sdot", sdot, METH_VARARGS,
    "Single Precision BLAS1 real vector dot product"},
