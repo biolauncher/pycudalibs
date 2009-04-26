@@ -64,7 +64,7 @@ class CudaArray(_cunumpy.array):
                     if self.itemsize == 8:
                         raise NotImplementedError("complex single vector-matrix mutiply not implemented!")
                     if self.itemsize == 16:
-                        raise NotImplementedError("omplex double vector-matrix mutiply not implemented!")
+                        raise NotImplementedError("complex double vector-matrix mutiply not implemented!")
                 
             else:
                 raise ValueError("argument array has invalid number of dimensions for vector dot product")

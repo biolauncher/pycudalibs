@@ -203,7 +203,33 @@ class TestDotProduct(unittest.TestCase):
 
 
 
-suite = unittest.TestLoader().loadTestsFromTestCase(TestDotProduct)
+def suite_single():
+    suite = unittest.TestSuite()
+    tests = ['test_real_single_vector_vector_dot',
+             'test_complex_single_vector_vector_dot',
+             # not in CUBLAS 'test_real_single_vector_matrix_dot',
+             # not in CUBLAS 'test_complex_single_vector_matrix_dot',
+             'test_real_single_matrix_vector_dot',
+             # not in CUBLAS 'test_complex_single_matrix_vector_dot',
+             'test_real_single_matrix_matrix_dot',
+             'test_complex_single_matrix_matrix_dot']
+
+    return unittest.TestSuite(map(TestDotProduct, tests))
+
+def suite_double():
+    suite = unittest.TestSuite()
+    tests = ['test_real_double_vector_vector_dot',
+             'test_complex_double_vector_vector_dot',
+             'test_real_double_vector_matrix_dot',
+             'test_complex_double_vector_matrix_dot',
+             'test_real_double_matrix_vector_dot',
+             'test_complex_double_matrix_vector_dot',
+             'test_real_double_matrix_matrix_dot',
+             'test_complex_double_matrix_matrix_dot']
+    return unittest.TestSuite(map(TestDotProduct, tests))
+
+def suite():
+    return unittest.TestSuite(suite_single())
 
 if __name__ == "__main__":
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    unittest.TextTestRunner(verbosity=2).run(suite())

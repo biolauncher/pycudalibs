@@ -28,15 +28,16 @@
 #define CUDA_ARRAY_TYPE_NAME "cuda.array"
 #define CUDA_ARRAY_TYPE_SYM_NAME "array"
 
-#define CUDA_ERROR_TYPE_NAME "cuda.ERROR"
-#define CUDA_ERROR_TYPE_SYM_NAME "ERROR"
+#define CUDA_ERROR_TYPE_NAME "cuda.CUDAERROR"
+#define CUDA_ERROR_TYPE_SYM_NAME "CUDAERROR"
 
 
 #define DEVICE_ARRAY_MAXDIMS 2 
 #define DEVICE_ARRAY_MINDIMS 1
 
-#define DEVICE_ARRAY_TYPE_OK(dt) ((PyTypeNum_ISCOMPLEX((dt)->type_num) && ((dt)->elsize == 8 || (dt)->elsize == 16)) \
-                                  || (PyTypeNum_ISFLOAT((dt)->type_num) && ((dt)->elsize == 4 || (dt)->elsize == 8)))
+#define DEVICE_ARRAY_TYPE_OK(dt) \
+  ((PyTypeNum_ISCOMPLEX((dt)->type_num) && ((dt)->elsize == 8 || (dt)->elsize == 16)) \
+   || (PyTypeNum_ISFLOAT((dt)->type_num) && ((dt)->elsize == 4 || (dt)->elsize == 8)))
 
 /* A python base class to encapsulate CUDA device memory. Fortran array semantics apply.  */
 

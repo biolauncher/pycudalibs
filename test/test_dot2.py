@@ -203,7 +203,33 @@ class TestDotProduct2(unittest.TestCase):
         self.assert_(arrays_equal(vc.toarray(), nc, epsilon=0.0001))
 
 
-suite = unittest.TestLoader().loadTestsFromTestCase(TestDotProduct2)
+def suite_single():
+    suite = unittest.TestSuite()
+    tests = ['test_real_single_vector_vector_dot2',
+             'test_complex_single_vector_vector_dot2',
+             'test_real_single_vector_matrix_dot2',
+             'test_complex_single_vector_matrix_dot2',
+             'test_real_single_matrix_vector_dot2',
+             'test_complex_single_matrix_vector_dot2',
+             'test_real_single_matrix_matrix_dot2',
+             'test_complex_single_matrix_matrix_dot2']
+
+    return unittest.TestSuite(map(TestDotProduct2, tests))
+
+def suite_double():
+    suite = unittest.TestSuite()
+    tests = ['test_real_double_vector_vector_dot2',
+             'test_complex_double_vector_vector_dot2',
+             'test_real_double_vector_matrix_dot2',
+             'test_complex_double_vector_matrix_dot2',
+             'test_real_double_matrix_vector_dot2',
+             'test_complex_double_matrix_vector_dot2',
+             'test_real_double_matrix_matrix_dot2',
+             'test_complex_double_matrix_matrix_dot2']
+    return unittest.TestSuite(map(TestDotProduct2, tests))
+
+def suite():
+    return unittest.TestSuite(suite_single())
 
 if __name__ == "__main__":
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    unittest.TextTestRunner(verbosity=2).run(suite())
