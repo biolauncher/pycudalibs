@@ -48,7 +48,7 @@ typedef struct {
   int a_dims[DEVICE_ARRAY_MAXDIMS];  /* dimensions */
   int e_size;                        /* sizeof element */
   PyArray_Descr* a_dtype;            /* keep reference to numpy dtype */
-  int a_transposed;                  /* this reserved for future use */
+  int a_transposed;                  /* is array transposed */
 } cuda_DeviceMemory;
 
 /* return number of elements: matrix, vector or scalar */

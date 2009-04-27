@@ -57,8 +57,7 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
     int nc = C->a_dims[1];
 
     // check geometry is good
-    // relaxed to allow row vectors to be returned if (k != kb || m != mc || n != nc) {
-    if (k != kb || m != mc) {
+    if (k != kb || m != mc || n != nc) {
       PyErr_SetString(PyExc_ValueError, "matrices have wrong shapes for matrix-matrix mutiplication");
       return NULL;
     }

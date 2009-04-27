@@ -202,7 +202,7 @@ cuda_DeviceMemory_2numpyArray(cuda_DeviceMemory *self, PyObject *args) {
   dims[1] = self->a_dims[1];
 
   // create a numpy array to hold the data
-  PyObject *array = PyArray_Empty(self->a_ndims, dims, self->a_dtype, 1);
+  PyObject *array = PyArray_Empty(self->a_ndims, dims, self->a_dtype, self->a_transposed? 0 : 1);
   if (array != NULL) {
     // fill it in
     if (cuda_error(cublasGetVector (a_elements(self), self->e_size, 
@@ -217,6 +217,19 @@ cuda_DeviceMemory_2numpyArray(cuda_DeviceMemory *self, PyObject *args) {
   return NULL; 
 }
 
+/* virtual transpose - really ought to create copy? */
+static PyObject*
+cuda_DeviceMemory_transpose(cuda_DeviceMemory *self, PyObject *args) {
+  // toggle the transpose flag
+  self->a_transposed ^= 1;
+  // swap shape 
+  int tmp = self->a_dims[0];
+  self->a_dims[0] = self->a_dims[1];
+  self->a_dims[1] = tmp;
+  // 
+  return Py_BuildValue("N", self);
+}
+
 /***************
  * method table
  **************/
@@ -224,6 +237,8 @@ cuda_DeviceMemory_2numpyArray(cuda_DeviceMemory *self, PyObject *args) {
 static PyMethodDef cuda_DeviceMemory_methods[] = {
   {"toarray", (PyCFunction) cuda_DeviceMemory_2numpyArray, METH_VARARGS,
    "copy cuda device array to a host numpy array."},
+  {"transpose", (PyCFunction) cuda_DeviceMemory_transpose, METH_VARARGS,
+   "mark a cuda device array as being transposed."},
   {NULL, NULL, 0, NULL} 
 };
 
