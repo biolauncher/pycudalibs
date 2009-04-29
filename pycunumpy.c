@@ -17,10 +17,14 @@ cuda_DeviceMemory_dealloc(cuda_DeviceMemory* self) {
 
   /* TODO refcoount these only sensible thing is to create another python object
      as we now share d_ptr e.g. in clones like transpose */
- 
+
+  /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     shared object: must not deallocate now until refcounted - leak or be damned 
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
   if (self->d_ptr != NULL) 
     if (cuda_error(cublasFree(self->d_ptr), "dealloc:cublasFree"))
       return;
+  */
 }
 
 
