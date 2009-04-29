@@ -51,6 +51,21 @@ typedef struct {
   int a_transposed;                  /* is array transposed */
 } cuda_DeviceMemory;
 
+
+#define OP(A) ((A)->a_transposed ? 't' : 'n')
+
+static inline int isvector(cuda_DeviceMemory* d) {
+  return d->a_ndims == 1 ? 1 : 0;
+}
+
+static inline int iscomplex(cuda_DeviceMemory* d) {
+  return PyTypeNum_ISCOMPLEX(d->a_dtype->type_num);
+}
+
+static inline int isdouble(cuda_DeviceMemory* d) {
+  return iscomplex(d) ? d->e_size == 16 : d->e_size == 8;
+}
+
 /* return number of elements: matrix, vector or scalar */
 
 static inline int a_elements(cuda_DeviceMemory* d) {
@@ -73,6 +88,13 @@ static char* cublas_error_text [] = {
 
 #if defined(CUNUMPY_MODULE)
 /* module definition only - see: pycunumpy.c */
+
+/* static prototypes */
+static inline cuda_DeviceMemory* make_vector(int, PyArray_Descr*);
+static inline cuda_DeviceMemory* make_matrix(int, int, PyArray_Descr*);
+// TODO declare all methods in here - 
+static PyObject* cuda_DeviceMemory_dot(cuda_DeviceMemory*, PyObject*);
+static PyObject* cuda_DeviceMemory_transpose(cuda_DeviceMemory*, PyObject*);
 
 #else
 
