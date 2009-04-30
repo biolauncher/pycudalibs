@@ -8,34 +8,27 @@
 #include <pycunumpy.h>
 
 static void
-cuda_DeviceMemory_dealloc(cuda_DeviceMemory* self) {
+cuda_Array_dealloc(cuda_Array* self) {
 
-  trace("TRACE cuda_DeviceMemory_dealloc: %0x (%0x)\n", (int) self, (int) self->d_ptr);
+  trace("TRACE cuda_Array_dealloc: %0x (%0x)\n", (int) self, (int) self->d_mem != NULL ? self->d_mem->d_ptr : 0);
 
   Py_XDECREF(self->a_dtype);
+  Py_XDECREF(self->d_mem);
   self->ob_type->tp_free((PyObject*)self);
 
-  /* TODO refcoount these only sensible thing is to create another python object
-     as we now share d_ptr e.g. in clones like transpose */
 
-  /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-     shared object: must not deallocate now until refcounted - leak or be damned 
-     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
-  if (self->d_ptr != NULL) 
-    if (cuda_error(cublasFree(self->d_ptr), "dealloc:cublasFree"))
-      return;
-  */
 }
 
 
 static PyObject *
-cuda_DeviceMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
-  cuda_DeviceMemory *self;
+cuda_Array_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+  cuda_Array *self;
 
-  self = (cuda_DeviceMemory *)type->tp_alloc(type, 0);
+  self = (cuda_Array *)type->tp_alloc(type, 0);
     
   if (self != NULL) {
-    self->d_ptr = NULL;
+    //self->d_ptr = NULL;
+    self->d_mem = NULL;
     self->e_size = 0;
     self->a_ndims = 0;
     self->a_dims[0] = 0;
@@ -48,7 +41,6 @@ cuda_DeviceMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 }
 
 
-
 /**
  * numpy array to cuda device memory constructor: 
  *  takes a numpy array
@@ -58,7 +50,7 @@ cuda_DeviceMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
  */
 
 static int
-cuda_DeviceMemory_init(cuda_DeviceMemory *self, PyObject *args, PyObject *kwds) {
+cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
   
   PyObject *object = NULL;
   PyArrayObject *array = NULL;
@@ -66,9 +58,9 @@ cuda_DeviceMemory_init(cuda_DeviceMemory *self, PyObject *args, PyObject *kwds) 
   static char *kwlist [] = {"object", "dtype", NULL};
 
   // in case we are re-initing __init__ free old memory 
-  if (self->d_ptr != NULL && cuda_error(cublasFree(self->d_ptr), "init:cublasFree"))
-    return -1;
-
+  //if (self->d_ptr != NULL && cuda_error(cublasFree(self->d_ptr), "init:cublasFree"))
+  //  return -1;
+  if (self->d_mem != NULL) { Py_DECREF(self->d_mem); }
   if (self->a_dtype != NULL) { Py_DECREF(self->a_dtype); }
 
   //if (PyArg_ParseTuple(args, "O|O&", &object, PyArray_DescrConverter, &dtype)) {
@@ -79,7 +71,7 @@ cuda_DeviceMemory_init(cuda_DeviceMemory *self, PyObject *args, PyObject *kwds) 
     Py_INCREF(dtype);
 
     // TODO: check acceptable data types
-    trace("TRACE cuda_DeviceMemory_init: dtype: elsize: %d domain: %s\n", 
+    trace("TRACE cuda_Array_init: dtype: elsize: %d domain: %s\n", 
           dtype->elsize, PyTypeNum_ISCOMPLEX(dtype->type_num) ? "complex" : "real");
 
     Py_INCREF(object);
@@ -90,21 +82,14 @@ cuda_DeviceMemory_init(cuda_DeviceMemory *self, PyObject *args, PyObject *kwds) 
     Py_DECREF(object);
 
     if (array == NULL) {
-      return -1;
       Py_DECREF(dtype);
+      return -1;
 
     } else {
       // get and check array vital statistics for allocation of cuda device memory
       npy_intp *dims = PyArray_DIMS(array);
       int ndims = PyArray_NDIM(array);
-
-      // may lift this restriction in time - now checked in PyArray_FromAny
-      //if (ndims < 1 || ndims > 2) {
-      //  PyErr_SetString(PyExc_TypeError, "number of array dimensions must be 1 or 2");
-      //  Py_DECREF(array);
-      //  return -1;
-      //}
-
+ 
       // init 
       self->a_ndims = ndims;
       self->a_dims[0] = dims[0];
@@ -115,22 +100,25 @@ cuda_DeviceMemory_init(cuda_DeviceMemory *self, PyObject *args, PyObject *kwds) 
       int n_elements = a_elements(self);
 
       // alloc
-      trace("TRACE cuda_DeviceMemory_init: elements: %d element_size: %d\n", n_elements, self->e_size);
-    
-      if (cuda_error(cublasAlloc(n_elements, self->e_size, (void**)&self->d_ptr), 
-                     "init:cublasAlloc")) {
+      trace("TRACE cuda_Array_init: elements: %d element_size: %d\n", n_elements, self->e_size);
+
+      if ((self->d_mem = alloc_cuda_Memory(n_elements, self->e_size)) == NULL) {
+        //if (cuda_error(cublasAlloc(n_elements, self->e_size, (void**)&self->d_ptr), 
+        //            "init:cublasAlloc")) {
         Py_DECREF(array);
         Py_DECREF(dtype);
         return -1;
       }
 
+      //Py_INCREF(self->d_mem);
       // copy data from initialiser to device memory
       void* source = PyArray_DATA(array);
       
-      if (cuda_error(cublasSetVector(n_elements, self->e_size, source, 1, self->d_ptr, 1), 
+      if (cuda_error(cublasSetVector(n_elements, self->e_size, source, 1, self->d_mem->d_ptr, 1), 
                      "init:cublasSetVector")) {
         Py_DECREF(array);
         Py_DECREF(dtype);
+        Py_DECREF(self->d_mem); //???
         return -1;
       }
 
@@ -145,11 +133,11 @@ cuda_DeviceMemory_init(cuda_DeviceMemory *self, PyObject *args, PyObject *kwds) 
 /* pretty print etc. */
 
 static inline PyObject *
-_stringify(cuda_DeviceMemory *self) {
+_stringify(cuda_Array *self) {
   if (self->a_ndims == 2)
     return PyString_FromFormat("<%s %p %s%d matrix(%d,%d) @%p>",
                                self->ob_type->tp_name,
-                               self->d_ptr,
+                               self->d_mem->d_ptr,
                                PyTypeNum_ISCOMPLEX(self->a_dtype->type_num) ? "complex" : "float",
                                self->e_size * 8,
                                self->a_dims[0],
@@ -158,7 +146,7 @@ _stringify(cuda_DeviceMemory *self) {
   else
     return PyString_FromFormat("<%s %p %s%d vector(%d) @%p>",
                                self->ob_type->tp_name,
-                               self->d_ptr,
+                               self->d_mem->d_ptr,
                                PyTypeNum_ISCOMPLEX(self->a_dtype->type_num) ? "complex" : "float",
                                self->e_size * 8,
                                self->a_dims[0],
@@ -166,38 +154,38 @@ _stringify(cuda_DeviceMemory *self) {
 }
 
 static PyObject*
-cuda_DeviceMemory_repr(cuda_DeviceMemory *self) {
+cuda_Array_repr(cuda_Array *self) {
   return _stringify(self);
 }
 
 static PyObject*
-cuda_DeviceMemory_str(cuda_DeviceMemory *self) {
+cuda_Array_str(cuda_Array *self) {
   return _stringify(self);
 }
 
 /* accessor methods */
 
 static PyObject*
-cuda_DeviceMemory_getShape(cuda_DeviceMemory *self, void *closure) {
+cuda_Array_getShape(cuda_Array *self, void *closure) {
   if (self->a_ndims == 2) return Py_BuildValue("(ii)", self->a_dims[0], self->a_dims[1]);
   else return Py_BuildValue("(i)", self->a_dims[0]);
 }
 
 static PyObject*
-cuda_DeviceMemory_getDtype(cuda_DeviceMemory *self, void *closure) {
+cuda_Array_getDtype(cuda_Array *self, void *closure) {
   return Py_BuildValue("O", self->a_dtype);
 }
 
 static PyObject*
-cuda_DeviceMemory_getTranspose(cuda_DeviceMemory *self, void *closure) {
-  return cuda_DeviceMemory_transpose(self, NULL);
+cuda_Array_getTranspose(cuda_Array *self, void *closure) {
+  return cuda_Array_transpose(self, NULL);
 }
 
 
 /* create a numpy host array from cuda device array */
 
 static PyObject*
-cuda_DeviceMemory_2numpyArray(cuda_DeviceMemory *self, PyObject *args) {
+cuda_Array_2numpyArray(cuda_Array *self, PyObject *args) {
 
   npy_intp dims[2];
   dims[0] = self->a_dims[0];
@@ -208,7 +196,7 @@ cuda_DeviceMemory_2numpyArray(cuda_DeviceMemory *self, PyObject *args) {
   if (array != NULL) {
     // fill it in
     if (cuda_error(cublasGetVector (a_elements(self), self->e_size, 
-                                    self->d_ptr, 1, PyArray_DATA(array), 1),
+                                    self->d_mem->d_ptr, 1, PyArray_DATA(array), 1),
                    "2numpy:cublasGetVector")) {
       
       Py_DECREF(array);
@@ -224,10 +212,10 @@ cuda_DeviceMemory_2numpyArray(cuda_DeviceMemory *self, PyObject *args) {
  * expose basic informational slots 
  ***********************************/
 
-static PyMemberDef cuda_DeviceMemory_members[] = {
-  {"itemsize", T_INT, offsetof(cuda_DeviceMemory, e_size), READONLY,
+static PyMemberDef cuda_Array_members[] = {
+  {"itemsize", T_INT, offsetof(cuda_Array, e_size), READONLY,
    "Size of each device array element"},
-  {"ndim", T_INT, offsetof(cuda_DeviceMemory, a_ndims), READONLY,
+  {"ndim", T_INT, offsetof(cuda_Array, a_ndims), READONLY,
    "Number of array dimensions"},
   {NULL}
 };
@@ -237,12 +225,12 @@ static PyMemberDef cuda_DeviceMemory_members[] = {
  * method table
  **************/
 
-static PyMethodDef cuda_DeviceMemory_methods[] = {
-  {"toarray", (PyCFunction) cuda_DeviceMemory_2numpyArray, METH_VARARGS,
+static PyMethodDef cuda_Array_methods[] = {
+  {"toarray", (PyCFunction) cuda_Array_2numpyArray, METH_VARARGS,
    "copy cuda device array to a host numpy array."},
-  {"transpose", (PyCFunction) cuda_DeviceMemory_transpose, METH_VARARGS,
+  {"transpose", (PyCFunction) cuda_Array_transpose, METH_VARARGS,
    "get transpose of array."},
-  {"dot", (PyCFunction) cuda_DeviceMemory_dot, METH_VARARGS,
+  {"dot", (PyCFunction) cuda_Array_dot, METH_VARARGS,
    "inner product the final dot!"},
   {NULL, NULL, 0, NULL} 
 };
@@ -251,12 +239,12 @@ static PyMethodDef cuda_DeviceMemory_methods[] = {
  * getters and setters
  *********************/
 
-static PyGetSetDef cuda_DeviceMemory_properties[] = {
-  {"shape", (getter) cuda_DeviceMemory_getShape, (setter) NULL, 
+static PyGetSetDef cuda_Array_properties[] = {
+  {"shape", (getter) cuda_Array_getShape, (setter) NULL, 
    "shape of device array", NULL},
-  {"dtype", (getter) cuda_DeviceMemory_getDtype, (setter) NULL, 
+  {"dtype", (getter) cuda_Array_getDtype, (setter) NULL, 
    "dtype of device array", NULL},
-  {"T", (getter) cuda_DeviceMemory_getTranspose, (setter) NULL, 
+  {"T", (getter) cuda_Array_getTranspose, (setter) NULL, 
    "transpose of array", NULL},
   {NULL}
 };
@@ -266,24 +254,24 @@ static PyGetSetDef cuda_DeviceMemory_properties[] = {
  * object type
  **************/
 
-static PyTypeObject cuda_DeviceMemoryType = {
+static PyTypeObject cuda_ArrayType = {
     PyObject_HEAD_INIT(NULL)
     0,                                        /*ob_size*/
     CUDA_ARRAY_TYPE_NAME,                     /*tp_name*/
-    sizeof(cuda_DeviceMemory),                /*tp_basicsize*/
+    sizeof(cuda_Array),                       /*tp_basicsize*/
     0,                                        /*tp_itemsize*/
-    (destructor)cuda_DeviceMemory_dealloc,    /*tp_dealloc*/
+    (destructor)cuda_Array_dealloc,           /*tp_dealloc*/
     0,                                        /*tp_print*/
     0,                                        /*tp_getattr*/
     0,                                        /*tp_setattr*/
     0,                                        /*tp_compare*/
-    (reprfunc)cuda_DeviceMemory_repr,         /*tp_repr*/
+    (reprfunc)cuda_Array_repr,                /*tp_repr*/
     0,                                        /*tp_as_number*/
     0,                                        /*tp_as_sequence*/
     0,                                        /*tp_as_mapping*/
     0,                                        /*tp_hash */
     0,                                        /*tp_call*/
-    (reprfunc)cuda_DeviceMemory_str,          /*tp_str*/
+    (reprfunc)cuda_Array_str,                 /*tp_str*/
     0,                                        /*tp_getattro*/
     0,                                        /*tp_setattro*/
     0,                                        /*tp_as_buffer*/
@@ -295,35 +283,28 @@ static PyTypeObject cuda_DeviceMemoryType = {
     0,                                        /* tp_weaklistoffset */
     0,                                        /* tp_iter */
     0,                                        /* tp_iternext */
-    cuda_DeviceMemory_methods,                /* tp_methods */
-    cuda_DeviceMemory_members,                /* tp_members */
-    cuda_DeviceMemory_properties,             /* tp_getset */
+    cuda_Array_methods,                       /* tp_methods */
+    cuda_Array_members,                       /* tp_members */
+    cuda_Array_properties,                    /* tp_getset */
     0,                                        /* tp_base */
     0,                                        /* tp_dict */
     0,                                        /* tp_descr_get */
     0,                                        /* tp_descr_set */
     0,                                        /* tp_dictoffset */
-    (initproc)cuda_DeviceMemory_init,         /* tp_init */
+    (initproc)cuda_Array_init,                /* tp_init */
     0,                                        /* tp_alloc */
-    cuda_DeviceMemory_new,                    /* tp_new */
+    cuda_Array_new,                           /* tp_new */
 };
 
 /**
- * virtual transpose - TODO: create a copy array with shared pointer to device memory
- * which means reference counting the device memory - needing an object wrapper of its own
- * to manage the de/allocation -  or we do our own struct with a counter! This is how
- * numpy works as the underlying data is shared! We could keep a reference to our "parent"
- * in the clone and increment that dependancy - in a chain... might work. but could
- * lead to nasty garbage chains since object are kept alive for no good reason.
- * no shortcuts to good code eh? 
- *
+ * virtual transpose  
  */
 static PyObject*
-cuda_DeviceMemory_transpose(cuda_DeviceMemory *self, PyObject *args) {
+cuda_Array_transpose(cuda_Array *self, PyObject *args) {
   // toggle the transpose flag for matrices only since we keep vectors in column form
   if (!isvector(self)) {
 
-    cuda_DeviceMemory *clone = (cuda_DeviceMemory *) _PyObject_New(&cuda_DeviceMemoryType);
+    cuda_Array *clone = (cuda_Array *) _PyObject_New(&cuda_ArrayType);
     if (clone != NULL) {
 
       clone->e_size = self->e_size;
@@ -333,10 +314,11 @@ cuda_DeviceMemory_transpose(cuda_DeviceMemory *self, PyObject *args) {
       clone->a_dims[1] = self->a_dims[0];
 
       /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-         shared object: must not deallocate now until refcounted - leak or be damned 
+         shared objects: must not deallocate now until refcounted - leak or be damned 
          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
-      clone->d_ptr = self->d_ptr; 
 
+      clone->d_mem = self->d_mem; 
+      Py_INCREF(clone->d_mem);
       clone->a_dtype = self->a_dtype;
       Py_INCREF(clone->a_dtype);
       return Py_BuildValue("O", clone);
@@ -352,14 +334,14 @@ cuda_DeviceMemory_transpose(cuda_DeviceMemory *self, PyObject *args) {
  * the monster of all methods!
  */
 static PyObject*
-cuda_DeviceMemory_dot(cuda_DeviceMemory *self, PyObject *args) {
-  cuda_DeviceMemory *other;
+cuda_Array_dot(cuda_Array *self, PyObject *args) {
+  cuda_Array *other;
 
   if (isdouble(self)) {
     PyErr_SetString(PyExc_NotImplementedError, "double precision linear algebra not yet implemented");
     return NULL;
 
-  } else if (PyArg_ParseTuple(args, "O!", &cuda_DeviceMemoryType, &other)) {
+  } else if (PyArg_ParseTuple(args, "O!", &cuda_ArrayType, &other)) {
     
     // types match?
     if (!PyArray_EquivTypes(self->a_dtype, other->a_dtype)) {
@@ -380,7 +362,7 @@ cuda_DeviceMemory_dot(cuda_DeviceMemory *self, PyObject *args) {
         }
 
         if (iscomplex(self)) {
-          cuComplex cip = cublasCdotu(lda, self->d_ptr, 1, other->d_ptr, 1);
+          cuComplex cip = cublasCdotu(lda, self->d_mem->d_ptr, 1, other->d_mem->d_ptr, 1);
           if (cublas_error("cdotu")) return NULL;
           else {
             Py_complex ip;
@@ -390,7 +372,7 @@ cuda_DeviceMemory_dot(cuda_DeviceMemory *self, PyObject *args) {
           }
 
         } else {
-            float ip = cublasSdot(lda, self->d_ptr, 1, other->d_ptr, 1);
+            float ip = cublasSdot(lda, self->d_mem->d_ptr, 1, other->d_mem->d_ptr, 1);
             if (cublas_error("sdot")) return NULL;
             else return Py_BuildValue("f", ip);
         }
@@ -408,7 +390,7 @@ cuda_DeviceMemory_dot(cuda_DeviceMemory *self, PyObject *args) {
           return NULL;
         }
         // create a conventional vector to receive result
-        cuda_DeviceMemory *C = make_vector(n, self->a_dtype);
+        cuda_Array *C = make_vector(n, self->a_dtype);
         if (C == NULL) return NULL;
         int ldc = 1;
 
@@ -416,11 +398,13 @@ cuda_DeviceMemory_dot(cuda_DeviceMemory *self, PyObject *args) {
           cuComplex alpha = {1., 0.};
           cuComplex beta = {0., 0.};
 
-          cublasCgemm(OP(self), OP(other), m, n, k, alpha, self->d_ptr, lda, other->d_ptr, ldb, beta, C->d_ptr, ldc);
+          cublasCgemm(OP(self), OP(other), m, n, k, alpha, 
+                      self->d_mem->d_ptr, lda, other->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
           if (cublas_error("cgemm")) return NULL;
         
         } else {
-          cublasSgemm(OP(self), OP(other), m, n, k, 1., self->d_ptr, lda, other->d_ptr, ldb, 0., C->d_ptr, ldc);
+          cublasSgemm(OP(self), OP(other), m, n, k, 1., 
+                      self->d_mem->d_ptr, lda, other->d_mem->d_ptr, ldb, 0., C->d_mem->d_ptr, ldc);
           if (cublas_error("sgemm")) return NULL;
         }
 
@@ -441,7 +425,7 @@ cuda_DeviceMemory_dot(cuda_DeviceMemory *self, PyObject *args) {
           return NULL;
         }
         // create a conventional vector to receive result
-        cuda_DeviceMemory *C = make_vector(m, self->a_dtype);
+        cuda_Array *C = make_vector(m, self->a_dtype);
         if (C == NULL) return NULL;
         int ldc = m;
 
@@ -449,11 +433,13 @@ cuda_DeviceMemory_dot(cuda_DeviceMemory *self, PyObject *args) {
           cuComplex alpha = {1., 0.};
           cuComplex beta = {0., 0.};
 
-          cublasCgemm(OP(self), OP(other), m, n, k, alpha, self->d_ptr, lda, other->d_ptr, ldb, beta, C->d_ptr, ldc);
+          cublasCgemm(OP(self), OP(other), m, n, k, alpha, 
+                      self->d_mem->d_ptr, lda, other->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
           if (cublas_error("cgemm")) return NULL;
         
         } else {
-          cublasSgemm(OP(self), OP(other), m, n, k, 1., self->d_ptr, lda, other->d_ptr, ldb, 0., C->d_ptr, ldc);
+          cublasSgemm(OP(self), OP(other), m, n, k, 1., 
+                      self->d_mem->d_ptr, lda, other->d_mem->d_ptr, ldb, 0., C->d_mem->d_ptr, ldc);
           if (cublas_error("sgemm")) return NULL;
         }
 
@@ -472,7 +458,7 @@ cuda_DeviceMemory_dot(cuda_DeviceMemory *self, PyObject *args) {
         }
 
         // create a matrix
-        cuda_DeviceMemory *C = make_matrix(m, n, self->a_dtype);
+        cuda_Array *C = make_matrix(m, n, self->a_dtype);
         if (C == NULL) return NULL;
         int ldc = m;
 
@@ -480,11 +466,13 @@ cuda_DeviceMemory_dot(cuda_DeviceMemory *self, PyObject *args) {
           cuComplex alpha = {1., 0.};
           cuComplex beta = {0., 0.};
 
-          cublasCgemm(OP(self), OP(other), m, n, k, alpha, self->d_ptr, lda, other->d_ptr, ldb, beta, C->d_ptr, ldc);
+          cublasCgemm(OP(self), OP(other), m, n, k, alpha, 
+                      self->d_mem->d_ptr, lda, other->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
           if (cublas_error("cgemm")) return NULL;
         
         } else {
-          cublasSgemm(OP(self), OP(other), m, n, k, 1., self->d_ptr, lda, other->d_ptr, ldb, 0., C->d_ptr, ldc);
+          cublasSgemm(OP(self), OP(other), m, n, k, 1., 
+                      self->d_mem->d_ptr, lda, other->d_mem->d_ptr, ldb, 0., C->d_mem->d_ptr, ldc);
           if (cublas_error("sgemm")) return NULL;
         }
 
@@ -501,10 +489,10 @@ cuda_DeviceMemory_dot(cuda_DeviceMemory *self, PyObject *args) {
  * the public api
  ***************************************************************************/
 
-static inline cuda_DeviceMemory*
+static inline cuda_Array*
 make_vector(int n, PyArray_Descr *dtype) {
 
-  cuda_DeviceMemory *self = (cuda_DeviceMemory *) _PyObject_New(&cuda_DeviceMemoryType);
+  cuda_Array *self = (cuda_Array *) _PyObject_New(&cuda_ArrayType);
   //trace("make_vector: (%d)\n", n);
 
   if (self != NULL) {
@@ -513,9 +501,10 @@ make_vector(int n, PyArray_Descr *dtype) {
     self->a_dims[0] = n;
     self->a_dims[1] = 1; // column vector convention
     self->a_transposed = 0; 
-    self->d_ptr = NULL;
+    self->d_mem = NULL;
 
-    if (cuda_error(cublasAlloc(n, self->e_size, (void**)&self->d_ptr), "make_vector:cublasAlloc")) {
+    //if (cuda_error(cublasAlloc(n, self->e_size, (void**)&self->d_ptr), "make_vector:cublasAlloc")) {
+    if ((self->d_mem = alloc_cuda_Memory(n, self->e_size)) == NULL) {
       return NULL;
     }
 
@@ -526,10 +515,10 @@ make_vector(int n, PyArray_Descr *dtype) {
 }
 
 
-static inline cuda_DeviceMemory*
+static inline cuda_Array*
 make_matrix(int m, int n, PyArray_Descr *dtype) {
 
-  cuda_DeviceMemory *self = (cuda_DeviceMemory *) _PyObject_New(&cuda_DeviceMemoryType);
+  cuda_Array *self = (cuda_Array *) _PyObject_New(&cuda_ArrayType);
   //trace("make_matrix: (%d,%d)\n", m, n);
 
   if (self != NULL) {
@@ -538,9 +527,10 @@ make_matrix(int m, int n, PyArray_Descr *dtype) {
     self->a_dims[0] = m;
     self->a_dims[1] = n; 
     self->a_transposed = 0; 
-    self->d_ptr = NULL;
+    self->d_mem = NULL;
 
-    if (cuda_error(cublasAlloc(m*n, self->e_size, (void**)&self->d_ptr), "make_matrix:cublasAlloc")) {
+    //if (cuda_error(cublasAlloc(m*n, self->e_size, (void**)&self->d_ptr), "make_matrix:cublasAlloc")) {
+    if ((self->d_mem = alloc_cuda_Memory(m*n, self->e_size)) == NULL) {
       return NULL;
     }
 
@@ -567,16 +557,19 @@ PyMODINIT_FUNC
 init_cunumpy(void) {
     PyObject* module;
 
-    if (PyType_Ready(&cuda_DeviceMemoryType) < 0)
-        return;
+    if (PyType_Ready(&cuda_ArrayType) < 0)
+      return;
+
+    if (init_cuda_MemoryType() < 0)
+      return;
 
     module = Py_InitModule3(CUDA_MODULE_NAME, module_methods, "CUDA device memory array module.");
 
     if (module == NULL) return;
     
     else {
-      Py_INCREF(&cuda_DeviceMemoryType);
-      PyModule_AddObject(module, CUDA_ARRAY_TYPE_SYM_NAME, (PyObject *)&cuda_DeviceMemoryType);
+      Py_INCREF(&cuda_ArrayType);
+      PyModule_AddObject(module, CUDA_ARRAY_TYPE_SYM_NAME, (PyObject *)&cuda_ArrayType);
 
       cuda_exception = PyErr_NewException(CUDA_ERROR_TYPE_NAME, NULL, NULL);
       Py_INCREF(cuda_exception);

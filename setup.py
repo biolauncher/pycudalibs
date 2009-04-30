@@ -14,7 +14,7 @@ cudalib = '/usr/local/cuda/lib'
 cunumpy = Extension('_cunumpy',
                     define_macros = [('MAJOR_VERSION', '0'),
                                      ('MINOR_VERSION', '1'),
-                                     ('DEBUG', '0')],
+                                     ('DEBUG', '1')],
                     include_dirs = ['.', cudainclude, numpyinclude],
                     libraries = ['cublas'],
                     library_dirs = [cudalib],

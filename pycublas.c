@@ -7,6 +7,7 @@
 #define NO_IMPORT_ARRAY
 #include <pycublas.h>
 
+/////////////////////// TODO - this code is broek by recent architecture changes
 
 /** 
  * Low level CUDA BLAS library api.
@@ -38,15 +39,15 @@ return the updated array C
 */
 
 static PyObject* sgemm(PyObject* self, PyObject* args) {
-  cuda_DeviceMemory *A, *B, *C;
+  cuda_Array *A, *B, *C;
   float alpha, beta;
   char transa, transb;
 
   if (PyArg_ParseTuple(args, "ccfO!O!fO!", 
                        &transa, &transb, &alpha, 
-                       cuda_DeviceMemoryType, &A, 
-                       cuda_DeviceMemoryType, &B, 
-                       &beta, cuda_DeviceMemoryType, &C)) {
+                       cuda_ArrayType, &A, 
+                       cuda_ArrayType, &B, 
+                       &beta, cuda_ArrayType, &C)) {
 
     // new setup for index twiddling transpose
     int m = transa == 't' ? A->a_dims[1] : A->a_dims[0];
@@ -73,7 +74,7 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
                    const float *B, int ldb, float beta, 
                    float *C, int ldc)
     */
-    cublasSgemm(transa, transb, m, n, k, alpha, A->d_ptr, lda, B->d_ptr, ldb, beta, C->d_ptr, ldc);
+    cublasSgemm(transa, transb, m, n, k, alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
 
     if (cublas_error("sgemm")) 
       return NULL;
@@ -93,15 +94,15 @@ return the updated array C
 */
 
 static PyObject* dgemm(PyObject* self, PyObject* args) {
-  cuda_DeviceMemory *A, *B, *C;
+  cuda_Array *A, *B, *C;
   double alpha, beta;
   char transa, transb;
 
   if (PyArg_ParseTuple(args, "ccdO!O!dO!", 
                        &transa, &transb, &alpha, 
-                       cuda_DeviceMemoryType, &A, 
-                       cuda_DeviceMemoryType, &B, 
-                       &beta, cuda_DeviceMemoryType, &C)) {
+                       cuda_ArrayType, &A, 
+                       cuda_ArrayType, &B, 
+                       &beta, cuda_ArrayType, &C)) {
 
     // new setup for index twiddling transpose
     int m = transa == 't' ? A->a_dims[1] : A->a_dims[0];
@@ -129,7 +130,7 @@ static PyObject* dgemm(PyObject* self, PyObject* args) {
                    const double *B, int ldb, double beta, 
                    double *C, int ldc)
     */
-    cublasDgemm(transa, transb, m, n, k, alpha, A->d_ptr, lda, B->d_ptr, ldb, beta, C->d_ptr, ldc);
+    cublasDgemm(transa, transb, m, n, k, alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
 
     if (cublas_error("dgemm")) 
       return NULL;
@@ -149,15 +150,15 @@ return the updated array C
 */
 
 static PyObject* cgemm(PyObject* self, PyObject* args) {
-  cuda_DeviceMemory *A, *B, *C;
+  cuda_Array *A, *B, *C;
   Py_complex alpha, beta;
   char transa, transb;
 
   if (PyArg_ParseTuple(args, "ccDO!O!DO!", 
                        &transa, &transb, &alpha, 
-                       cuda_DeviceMemoryType, &A, 
-                       cuda_DeviceMemoryType, &B, 
-                       &beta, cuda_DeviceMemoryType, &C)) {
+                       cuda_ArrayType, &A, 
+                       cuda_ArrayType, &B, 
+                       &beta, cuda_ArrayType, &C)) {
 
     /* N.B. unfortunately python only has a double precision complex
        type so we must cast with risk here - in most of our usage of
@@ -197,7 +198,7 @@ static PyObject* cgemm(PyObject* self, PyObject* args) {
                    int lda, const cuComplex *B, int ldb, 
                    cuComplex beta, cuComplex *C, int ldc) 
     */
-    cublasCgemm(transa, transb, m, n, k, c_alpha, A->d_ptr, lda, B->d_ptr, ldb, c_beta, C->d_ptr, ldc);
+    cublasCgemm(transa, transb, m, n, k, c_alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, c_beta, C->d_mem->d_ptr, ldc);
 
     if (cublas_error("cgemm")) 
       return NULL;
@@ -217,15 +218,15 @@ return the updated array C
 */
 
 static PyObject* zgemm(PyObject* self, PyObject* args) {
-  cuda_DeviceMemory *A, *B, *C;
+  cuda_Array *A, *B, *C;
   Py_complex alpha, beta;
   char transa, transb;
 
   if (PyArg_ParseTuple(args, "ccDO!O!DO!", 
                        &transa, &transb, &alpha, 
-                       cuda_DeviceMemoryType, &A, 
-                       cuda_DeviceMemoryType, &B, 
-                       &beta, cuda_DeviceMemoryType, &C)) {
+                       cuda_ArrayType, &A, 
+                       cuda_ArrayType, &B, 
+                       &beta, cuda_ArrayType, &C)) {
 
     cuDoubleComplex c_alpha;
     cuDoubleComplex c_beta;
@@ -260,7 +261,7 @@ static PyObject* zgemm(PyObject* self, PyObject* args) {
                    int lda, const cuDoubleComplex *B, int ldb, 
                    cuDoubleComplex beta, cuDoubleComplex *C, int ldc) 
     */
-    cublasZgemm(transa, transb, m, n, k, c_alpha, A->d_ptr, lda, B->d_ptr, ldb, c_beta, C->d_ptr, ldc);
+    cublasZgemm(transa, transb, m, n, k, c_alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, c_beta, C->d_mem->d_ptr, ldc);
 
     if (cublas_error("zgemm")) 
       return NULL;
@@ -278,11 +279,11 @@ returns a python float
 */
 
 static PyObject* sdot(PyObject* self, PyObject* args) {
-  cuda_DeviceMemory *A, *B;
+  cuda_Array *A, *B;
     
   if (PyArg_ParseTuple(args, "O!O!", 
-                       cuda_DeviceMemoryType, &A, 
-                       cuda_DeviceMemoryType, &B)) {
+                       cuda_ArrayType, &A, 
+                       cuda_ArrayType, &B)) {
 
     int lda = A->a_dims[0];
     int ldb = B->a_dims[0];
@@ -297,7 +298,7 @@ static PyObject* sdot(PyObject* self, PyObject* args) {
       cublasSdot (int n, const float *x, int incx, const float *y, int incy) 
     */
 
-    float ip = cublasSdot(lda, A->d_ptr, 1, B->d_ptr, 1);
+    float ip = cublasSdot(lda, A->d_mem->d_ptr, 1, B->d_mem->d_ptr, 1);
 
     if (cublas_error("sdot")) 
       return NULL;
@@ -317,15 +318,15 @@ return the updated array C
 */
 
 static PyObject* sgemv(PyObject* self, PyObject* args) {
-  cuda_DeviceMemory *A, *B, *C;
+  cuda_Array *A, *B, *C;
   float alpha, beta;
   char transa;
 
   if (PyArg_ParseTuple(args, "cfO!O!fO!", 
                        &transa, &alpha, 
-                       cuda_DeviceMemoryType, &A, 
-                       cuda_DeviceMemoryType, &B, &beta, 
-                       cuda_DeviceMemoryType, &C)) {
+                       cuda_ArrayType, &A, 
+                       cuda_ArrayType, &B, &beta, 
+                       cuda_ArrayType, &C)) {
 
     // new setup for index twiddling transpose
     int m = transa == 't' ? A->a_dims[1] : A->a_dims[0];
@@ -349,7 +350,7 @@ static PyObject* sgemv(PyObject* self, PyObject* args) {
                   const float *A, int lda, const float *x,  
                   int incx, float beta, float *y, int incy)
     */
-    cublasSgemv(transa, m, n, alpha, A->d_ptr, lda, B->d_ptr, 1, beta, C->d_ptr, 1);
+    cublasSgemv(transa, m, n, alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, 1, beta, C->d_mem->d_ptr, 1);
 
     if (cublas_error("sgemv")) 
       return NULL;
@@ -368,11 +369,11 @@ returns a python double
 */
 
 static PyObject* ddot(PyObject* self, PyObject* args) {
-  cuda_DeviceMemory *A, *B;
+  cuda_Array *A, *B;
     
   if (PyArg_ParseTuple(args, "O!O!", 
-                       cuda_DeviceMemoryType, &A, 
-                       cuda_DeviceMemoryType, &B)) {
+                       cuda_ArrayType, &A, 
+                       cuda_ArrayType, &B)) {
 
     int lda = A->a_dims[0];
     int ldb = B->a_dims[0];
@@ -388,7 +389,7 @@ static PyObject* ddot(PyObject* self, PyObject* args) {
       cublasDdot (int n, const double *x, int incx, const double *y, int incy) 
     */
 
-    double ip = cublasDdot(lda, A->d_ptr, 1, B->d_ptr, 1);
+    double ip = cublasDdot(lda, A->d_mem->d_ptr, 1, B->d_mem->d_ptr, 1);
 
     if (cublas_error("ddot")) 
       return NULL;
@@ -407,11 +408,11 @@ returns a python complex
 */
 
 static PyObject* cdotu(PyObject* self, PyObject* args) {
-  cuda_DeviceMemory *A, *B;
+  cuda_Array *A, *B;
     
   if (PyArg_ParseTuple(args, "O!O!", 
-                       cuda_DeviceMemoryType, &A, 
-                       cuda_DeviceMemoryType, &B)) {
+                       cuda_ArrayType, &A, 
+                       cuda_ArrayType, &B)) {
 
     int lda = A->a_dims[0];
     int ldb = B->a_dims[0];
@@ -427,7 +428,7 @@ static PyObject* cdotu(PyObject* self, PyObject* args) {
       cublasCdotu (int n, const cuComplex *x, int incx, const cuComplex *y, int incy) 
     */
 
-    cuComplex cip = cublasCdotu(lda, A->d_ptr, 1, B->d_ptr, 1);
+    cuComplex cip = cublasCdotu(lda, A->d_mem->d_ptr, 1, B->d_mem->d_ptr, 1);
 
     if (cublas_error("cdotu")) 
       return NULL;
@@ -450,11 +451,11 @@ returns a python complex
 */
 
 static PyObject* cdotc(PyObject* self, PyObject* args) {
-  cuda_DeviceMemory *A, *B;
+  cuda_Array *A, *B;
     
   if (PyArg_ParseTuple(args, "O!O!", 
-                       cuda_DeviceMemoryType, &A, 
-                       cuda_DeviceMemoryType, &B)) {
+                       cuda_ArrayType, &A, 
+                       cuda_ArrayType, &B)) {
 
     int lda = A->a_dims[0];
     int ldb = B->a_dims[0];
@@ -470,7 +471,7 @@ static PyObject* cdotc(PyObject* self, PyObject* args) {
       cublasCdotc (int n, const cuComplex *x, int incx, const cuComplex *y, int incy) 
     */
 
-    cuComplex cip = cublasCdotc(lda, A->d_ptr, 1, B->d_ptr, 1);
+    cuComplex cip = cublasCdotc(lda, A->d_mem->d_ptr, 1, B->d_mem->d_ptr, 1);
 
     if (cublas_error("cdotc")) 
       return NULL;
