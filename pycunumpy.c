@@ -10,13 +10,10 @@
 static void
 cuda_Array_dealloc(cuda_Array* self) {
 
-  trace("TRACE cuda_Array_dealloc: %0x (%0x)\n", (int) self, (int) self->d_mem != NULL ? self->d_mem->d_ptr : 0);
-
+  trace("TRACE cuda_Array_dealloc: %0x (%0x)\n", (int) self, (int) (self->d_mem != NULL ? self->d_mem->d_ptr : 0));
   Py_XDECREF(self->a_dtype);
   Py_XDECREF(self->d_mem);
   self->ob_type->tp_free((PyObject*)self);
-
-
 }
 
 
@@ -27,7 +24,6 @@ cuda_Array_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
   self = (cuda_Array *)type->tp_alloc(type, 0);
     
   if (self != NULL) {
-    //self->d_ptr = NULL;
     self->d_mem = NULL;
     self->e_size = 0;
     self->a_ndims = 0;
@@ -325,7 +321,7 @@ cuda_Array_transpose(cuda_Array *self, PyObject *args) {
 
     } else return NULL;
   
-  } else return (PyObject*) self; // noop for vectors as they are always column vecs 
+  } else return Py_BuildValue("O", self); // noop for vectors as they are always column vecs 
 }
 
 
