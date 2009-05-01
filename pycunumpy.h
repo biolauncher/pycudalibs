@@ -77,7 +77,7 @@ static inline int cublas_error(char* where) {
 #include <pycumem.h>
 
 
-/* defines for various things */
+/* defines for various constants */
 
 #define CUDA_MODULE_NAME "_cunumpy"
 

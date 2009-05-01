@@ -309,10 +309,6 @@ cuda_Array_transpose(cuda_Array *self, PyObject *args) {
       clone->a_dims[0] = self->a_dims[1];
       clone->a_dims[1] = self->a_dims[0];
 
-      /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-         shared objects: must not deallocate now until refcounted - leak or be damned 
-         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
-
       clone->d_mem = self->d_mem; 
       Py_INCREF(clone->d_mem);
       clone->a_dtype = self->a_dtype;
@@ -344,9 +340,12 @@ cuda_Array_dot(cuda_Array *self, PyObject *args) {
       PyErr_SetString(PyExc_ValueError, "array types are not equivalent");
       return NULL;
     }
+    
+    /* leading dimensions for matrices are swapped as dims have already been! 
+       n.b. vectors are never transposed */
 
-    int lda = self->a_dims[0];
-    int ldb = other->a_dims[0];
+    int lda = self->a_transposed ? self->a_dims[1] : self->a_dims[0];
+    int ldb = other->a_transposed ? other->a_dims[1] : other->a_dims[0];
     
     if (isvector(self)) {
 

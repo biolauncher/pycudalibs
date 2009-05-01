@@ -49,7 +49,7 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
                        cuda_ArrayType, &B, 
                        &beta, cuda_ArrayType, &C)) {
 
-    // new setup for index twiddling transpose
+    // XXX new setup for index twiddling transpose - this now goes - but see below
     int m = transa == 't' ? A->a_dims[1] : A->a_dims[0];
     int k = transa == 't' ? A->a_dims[0] : A->a_dims[1]; 
     int kb = transb == 't' ? B->a_dims[1] : B->a_dims[0];
@@ -63,6 +63,7 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
       return NULL;
     }
 
+    // XXX since transposed arrays will have had there dims swapped we need to swap again here
     int lda = A->a_dims[0];
     int ldb = B->a_dims[0];
     int ldc = C->a_dims[0];
@@ -74,7 +75,8 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
                    const float *B, int ldb, float beta, 
                    float *C, int ldc)
     */
-    cublasSgemm(transa, transb, m, n, k, alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
+    cublasSgemm(transa, transb, m, n, k, alpha, 
+                A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
 
     if (cublas_error("sgemm")) 
       return NULL;
