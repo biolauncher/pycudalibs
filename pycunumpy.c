@@ -53,9 +53,7 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
   PyArray_Descr *dtype = NULL;
   static char *kwlist [] = {"object", "dtype", NULL};
 
-  // in case we are re-initing __init__ free old memory 
-  //if (self->d_ptr != NULL && cuda_error(cublasFree(self->d_ptr), "init:cublasFree"))
-  //  return -1;
+  // in case we are re-initing in __init__ 
   if (self->d_mem != NULL) { Py_DECREF(self->d_mem); }
   if (self->a_dtype != NULL) { Py_DECREF(self->a_dtype); }
 
@@ -99,8 +97,6 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
       trace("TRACE cuda_Array_init: elements: %d element_size: %d\n", n_elements, self->e_size);
 
       if ((self->d_mem = alloc_cuda_Memory(n_elements, self->e_size)) == NULL) {
-        //if (cuda_error(cublasAlloc(n_elements, self->e_size, (void**)&self->d_ptr), 
-        //            "init:cublasAlloc")) {
         Py_DECREF(array);
         Py_DECREF(dtype);
         return -1;
@@ -223,11 +219,14 @@ static PyMemberDef cuda_Array_members[] = {
 
 static PyMethodDef cuda_Array_methods[] = {
   {"toarray", (PyCFunction) cuda_Array_2numpyArray, METH_VARARGS,
-   "copy cuda device array to a host numpy array."},
+   "Store CUDA device array into a host numpy array."},
   {"transpose", (PyCFunction) cuda_Array_transpose, METH_VARARGS,
-   "get transpose of array."},
+   "Transpose of array."},
   {"dot", (PyCFunction) cuda_Array_dot, METH_VARARGS,
-   "inner product the final dot!"},
+   "Inner product of vectors and matrices."},
+  {"multiply", (PyCFunction) cuda_Array_scale, METH_VARARGS,
+   "Element by element multiply."},
+
   {NULL, NULL, 0, NULL} 
 };
 
@@ -323,7 +322,10 @@ cuda_Array_transpose(cuda_Array *self, PyObject *args) {
 
 /**
  * dot product - emulates numpy array and vector behaviour for taking inner-products
- * the monster of all methods!
+ * the monster of all methods - and this is just the single precision version!
+ * we allocate and return result matrices as cuda_Array where appropriate but none of
+ * this inccurs device <-> host memory transfers.
+ * this method is overloaded for vectors and matrices with 64bit complex and float32 payloads
  */
 static PyObject*
 cuda_Array_dot(cuda_Array *self, PyObject *args) {
@@ -478,6 +480,63 @@ cuda_Array_dot(cuda_Array *self, PyObject *args) {
   else return NULL;
 }
 
+/**
+ * scalar multiplication - in place! yetch maybe we should copy the thing and then we can do 
+ * scaling by complex of real vectors (arrays)
+ * TODO - this is exposed as mutiply (make it do element by element also)
+ */
+static PyObject*
+cuda_Array_scale(cuda_Array *self, PyObject *args) {
+  PyObject *scalar;
+
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision linear algebra not yet implemented");
+    return NULL;
+
+  } else if (PyArg_ParseTuple(args, "O", &scalar)) {
+    if (PyNumber_Check(scalar)) {
+      
+      if (PyComplex_Check(scalar)) {
+
+        if (iscomplex(self)) {
+
+          Py_complex z_scalar = PyComplex_AsCComplex(scalar);
+          cuComplex c_scalar;
+          c_scalar.x = (float) z_scalar.real;
+          c_scalar.y = (float) z_scalar.imag;
+          
+          // call blas complex-complex case
+          cublasCscal(a_elements(self), c_scalar, self->d_mem->d_ptr, 1);
+          return cublas_error("cscal") ? NULL : Py_BuildValue("O", self);
+            
+        } else {
+          PyErr_SetString(PyExc_ValueError, "cannot scale real array with complex scalar - yet!");
+          return NULL;
+        }
+
+      } else {
+        // real scalar
+        float s = (float) PyFloat_AsDouble(scalar);
+
+        if (iscomplex(self)) {
+          
+          cublasCsscal(a_elements(self), s, self->d_mem->d_ptr, 1);
+          return cublas_error("csscal") ? NULL : Py_BuildValue("O", self);
+       
+        } else {
+          
+          cublasSscal(a_elements(self), s, self->d_mem->d_ptr, 1);
+          return cublas_error("sscal") ? NULL : Py_BuildValue("O", self);
+        }
+      }
+
+    } else {
+      PyErr_SetString(PyExc_ValueError, "scalar is not a number");
+      return NULL;
+    }
+    
+  } else return NULL;
+}
 
 /***************************************************************************
  * helper methods for constructing arrays and vectors these are not part of

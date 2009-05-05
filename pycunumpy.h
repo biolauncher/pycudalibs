@@ -145,6 +145,7 @@ static inline cuda_Array* make_matrix(int, int, PyArray_Descr*);
 // TODO declare all methods in here - 
 static PyObject* cuda_Array_dot(cuda_Array*, PyObject*);
 static PyObject* cuda_Array_transpose(cuda_Array*, PyObject*);
+static PyObject* cuda_Array_scale(cuda_Array*, PyObject*);
 
 #else
 

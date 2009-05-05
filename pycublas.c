@@ -7,7 +7,7 @@
 #define NO_IMPORT_ARRAY
 #include <pycublas.h>
 
-/////////////////////// TODO - this code is broek by recent architecture changes
+/////////////////////// TODO - this code is broken by recent architecture changes
 
 /** 
  * Low level CUDA BLAS library api.
