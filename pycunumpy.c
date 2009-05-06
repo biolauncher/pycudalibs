@@ -226,6 +226,8 @@ static PyMethodDef cuda_Array_methods[] = {
    "Inner product of vectors and matrices."},
   {"multiply", (PyCFunction) cuda_Array_scale, METH_VARARGS,
    "Element by element multiply."},
+  {"copy", (PyCFunction) cuda_Array_copy, METH_VARARGS,
+   "Create a copy of an array using only device-device transfer."},
 
   {NULL, NULL, 0, NULL} 
 };
@@ -494,11 +496,15 @@ cuda_Array_scale(cuda_Array *self, PyObject *args) {
     return NULL;
 
   } else if (PyArg_ParseTuple(args, "O", &scalar)) {
+
+    // no nasty side effects here - copy is cheap (well device side anyway)
+    cuda_Array *copy = copy_array(self);
+
     if (PyNumber_Check(scalar)) {
       
       if (PyComplex_Check(scalar)) {
 
-        if (iscomplex(self)) {
+        if (iscomplex(copy)) {
 
           Py_complex z_scalar = PyComplex_AsCComplex(scalar);
           cuComplex c_scalar;
@@ -506,8 +512,8 @@ cuda_Array_scale(cuda_Array *self, PyObject *args) {
           c_scalar.y = (float) z_scalar.imag;
           
           // call blas complex-complex case
-          cublasCscal(a_elements(self), c_scalar, self->d_mem->d_ptr, 1);
-          return cublas_error("cscal") ? NULL : Py_BuildValue("O", self);
+          cublasCscal(a_elements(copy), c_scalar, copy->d_mem->d_ptr, 1);
+          return cublas_error("cscal") ? NULL : Py_BuildValue("O", copy);
             
         } else {
           PyErr_SetString(PyExc_ValueError, "cannot scale real array with complex scalar - yet!");
@@ -518,24 +524,33 @@ cuda_Array_scale(cuda_Array *self, PyObject *args) {
         // real scalar
         float s = (float) PyFloat_AsDouble(scalar);
 
-        if (iscomplex(self)) {
+        if (iscomplex(copy)) {
           
-          cublasCsscal(a_elements(self), s, self->d_mem->d_ptr, 1);
-          return cublas_error("csscal") ? NULL : Py_BuildValue("O", self);
+          cublasCsscal(a_elements(copy), s, copy->d_mem->d_ptr, 1);
+          return cublas_error("csscal") ? NULL : Py_BuildValue("O", copy);
        
         } else {
           
-          cublasSscal(a_elements(self), s, self->d_mem->d_ptr, 1);
-          return cublas_error("sscal") ? NULL : Py_BuildValue("O", self);
+          cublasSscal(a_elements(copy), s, copy->d_mem->d_ptr, 1);
+          return cublas_error("sscal") ? NULL : Py_BuildValue("O", copy);
         }
       }
 
     } else {
-      PyErr_SetString(PyExc_ValueError, "scalar is not a number");
+      PyErr_SetString(PyExc_ValueError, "can only mutiply by scalars - watch this space!");
       return NULL;
     }
     
   } else return NULL;
+}
+
+/**
+ * a method to create a copy of an array
+ */
+static PyObject* 
+cuda_Array_copy(cuda_Array *self) {
+  cuda_Array *copy = copy_array(self);
+  return (copy == NULL) ? NULL : Py_BuildValue("O", copy);
 }
 
 /***************************************************************************
@@ -557,7 +572,6 @@ make_vector(int n, PyArray_Descr *dtype) {
     self->a_transposed = 0; 
     self->d_mem = NULL;
 
-    //if (cuda_error(cublasAlloc(n, self->e_size, (void**)&self->d_ptr), "make_vector:cublasAlloc")) {
     if ((self->d_mem = alloc_cuda_Memory(n, self->e_size)) == NULL) {
       return NULL;
     }
@@ -583,7 +597,6 @@ make_matrix(int m, int n, PyArray_Descr *dtype) {
     self->a_transposed = 0; 
     self->d_mem = NULL;
 
-    //if (cuda_error(cublasAlloc(m*n, self->e_size, (void**)&self->d_ptr), "make_matrix:cublasAlloc")) {
     if ((self->d_mem = alloc_cuda_Memory(m*n, self->e_size)) == NULL) {
       return NULL;
     }
@@ -592,6 +605,49 @@ make_matrix(int m, int n, PyArray_Descr *dtype) {
     Py_INCREF(self->a_dtype);
   }
   return self;
+}
+
+
+static inline cuda_Array* 
+copy_array(cuda_Array* self) {
+  
+  if (isdouble(self)) {
+    /* could use cudaMemcopy device to device for double precision here... */
+    // cudaError_t sts cudaMemcpy( void* dst, const void* src, size_t count, cudaMemcpyDeviceToDevice);
+    PyErr_SetString(PyExc_NotImplementedError, "double precision linear algebra not yet implemented");
+    return NULL;
+  }
+
+  cuda_Array *new = (cuda_Array *) _PyObject_New(&cuda_ArrayType);
+
+  if (new != NULL) {
+    new->e_size = self->e_size;
+    new->a_ndims = self->a_ndims;
+    new->a_dims[0] = self->a_dims[0];
+    new->a_dims[1] = self->a_dims[1]; 
+    new->a_transposed = self->a_transposed; 
+    new->d_mem = NULL;
+
+    if ((new->d_mem = alloc_cuda_Memory(a_elements(self), new->e_size)) == NULL) {
+      return NULL;
+    }
+
+    if (iscomplex(self)) {
+      // single precsion complex
+      cublasCcopy (a_elements(self), self->d_mem->d_ptr, 1, new->d_mem->d_ptr, 1);
+      if (cublas_error("ccopy")) return NULL;
+
+    } else {
+      // copy self to new using blas vector copy: single precision real
+      cublasScopy (a_elements(self), self->d_mem->d_ptr, 1, new->d_mem->d_ptr, 1);
+      if (cublas_error("scopy")) return NULL;
+    }
+
+    new->a_dtype = self->a_dtype;
+    Py_INCREF(new->a_dtype);
+  }
+  // don't return this to python directly.
+  return new;
 }
 
 

@@ -101,7 +101,7 @@ static inline int cublas_error(char* where) {
  * A python base class to encapsulate a CUDA memory backed array
  * numpy is our inspiration and guiding light.
  * Fortran array semantics apply.
- * Column vectors are de-rigeur
+ * Vectors are conventionally column vectors.
  */
 
 typedef struct {
@@ -142,10 +142,13 @@ static inline int a_elements(cuda_Array* d) {
 /* static prototypes */
 static inline cuda_Array* make_vector(int, PyArray_Descr*);
 static inline cuda_Array* make_matrix(int, int, PyArray_Descr*);
+static inline cuda_Array* copy_array(cuda_Array*);
+
 // TODO declare all methods in here - 
 static PyObject* cuda_Array_dot(cuda_Array*, PyObject*);
 static PyObject* cuda_Array_transpose(cuda_Array*, PyObject*);
 static PyObject* cuda_Array_scale(cuda_Array*, PyObject*);
+static PyObject* cuda_Array_copy(cuda_Array*);
 
 #else
 
