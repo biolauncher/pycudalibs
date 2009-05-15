@@ -149,6 +149,10 @@ static PyObject* cuda_Array_dot(cuda_Array*, PyObject*);
 static PyObject* cuda_Array_transpose(cuda_Array*, PyObject*);
 static PyObject* cuda_Array_scale(cuda_Array*, PyObject*);
 static PyObject* cuda_Array_copy(cuda_Array*);
+static PyObject* cuda_Array_2norm(cuda_Array*);
+static PyObject* cuda_Array_asum(cuda_Array*);
+static PyObject* cuda_Array_reshape(cuda_Array*, PyObject*);
+
 
 #else
 

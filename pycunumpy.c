@@ -228,6 +228,12 @@ static PyMethodDef cuda_Array_methods[] = {
    "Element by element multiply."},
   {"copy", (PyCFunction) cuda_Array_copy, METH_VARARGS,
    "Create a copy of an array using only device-device transfer."},
+  {"norm", (PyCFunction) cuda_Array_2norm, METH_VARARGS,
+   "The 2norm of a vector or Frobenius or Hilbert-Schmidt norm of a matrix."},
+  {"asum", (PyCFunction) cuda_Array_asum, METH_VARARGS,
+   "The absolute sum of an array."},
+  {"reshape", (PyCFunction) cuda_Array_reshape, METH_VARARGS,
+   "Reshape the dimensions of an cuda array."},
 
   {NULL, NULL, 0, NULL} 
 };
@@ -483,9 +489,7 @@ cuda_Array_dot(cuda_Array *self, PyObject *args) {
 }
 
 /**
- * scalar multiplication - in place! yetch maybe we should copy the thing and then we can do 
- * scaling by complex of real vectors (arrays)
- * TODO - this is exposed as mutiply (make it do element by element also)
+ * scalar multiplication 
  */
 static PyObject*
 cuda_Array_scale(cuda_Array *self, PyObject *args) {
@@ -545,13 +549,128 @@ cuda_Array_scale(cuda_Array *self, PyObject *args) {
 }
 
 /**
- * a method to create a copy of an array
+ * 2 norm euclidean L2 for vectors or Frobenius or Hilbert-Schmidt for matrices.
+ * trickery is to treat matrices as vectors to achieve entrywise norms 
+ */
+static PyObject*
+cuda_Array_2norm(cuda_Array *self) {
+
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision linear algebra not yet implemented");
+    return NULL;
+
+  } else if (iscomplex(self)) {
+    float norm = cublasScnrm2(a_elements(self), self->d_mem->d_ptr, 1);
+    return cublas_error("scnrm2") ? NULL : Py_BuildValue("f", norm);
+
+  } else {
+    float norm = cublasSnrm2(a_elements(self), self->d_mem->d_ptr, 1);
+    return cublas_error("snrm2") ? NULL : Py_BuildValue("f", norm);
+  }
+}
+
+/**
+ * absolute sum of an array - not the L1 norm in complex case
+ */  
+static PyObject*
+cuda_Array_asum(cuda_Array *self) {
+
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision linear algebra not yet implemented");
+    return NULL;
+
+  } else if (iscomplex(self)) {
+    float sum = cublasScasum(a_elements(self), self->d_mem->d_ptr, 1);
+    return cublas_error("scasum") ? NULL : Py_BuildValue("f", sum);
+
+  } else {
+    float sum = cublasSasum(a_elements(self), self->d_mem->d_ptr, 1);
+    return cublas_error("sasum") ? NULL : Py_BuildValue("f", sum);
+  }
+}
+
+/**
+ * reshape - clone and meddle with the descriptor
+ */
+static PyObject*
+cuda_Array_reshape(cuda_Array *self, PyObject *args) {
+  //PyObject* tuple;
+  int dim0 = 0, dim1 = 0;
+
+  if (PyArg_ParseTuple(args, "(ii)", &dim0, &dim1)) {
+    /* 
+       if (PyArg_ParseTuple(args, "O!", PyTupleObject, &tuple)) {
+       // 
+       Py_ssize_t len = (int) PyTuple_GET_SIZE(tuple);
+       if (len > 2) {
+       PyErr_SetString(PyExc_ValueError, "maximum number of dimensions is two")
+       return NULL;
+       } 
+    */
+    int ndims = dim1 == 0 ? 1 : 2;
+    if (ndims == 1) dim1 = 1; // column vector convention
+
+    if (dim0 == 0 || dim0 * dim1 != self->a_dims[0] * self->a_dims[1]) {
+      PyErr_SetString(PyExc_ValueError, "required reshape does not match existing array dimensions");
+      return NULL;
+    }
+      
+    cuda_Array *clone = (cuda_Array *) _PyObject_New(&cuda_ArrayType);
+    if (clone != NULL) {
+
+      clone->e_size = self->e_size;
+      clone->a_ndims = ndims; // RESHAPE
+      clone->a_transposed = self->a_transposed;
+
+      clone->a_dims[0] = dim0; // RESHAPE
+      clone->a_dims[1] = dim1; // RESHAPE
+
+      clone->d_mem = self->d_mem; 
+      Py_INCREF(clone->d_mem);
+      clone->a_dtype = self->a_dtype;
+      Py_INCREF(clone->a_dtype);
+      return Py_BuildValue("O", clone);
+
+    } else return NULL;
+  } else return NULL;
+}
+
+/**
+ * sum of an array - the only way to do this in blas is with dot and a vector of ones!
+ * -- no way I'm doing that b/s - this now under review
+   
+static PyObject*
+cuda_Array_sum(cuda_Array *self) {
+
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision linear algebra not yet implemented");
+    return NULL;
+
+  } else if (iscomplex(self)) {
+    
+    float sum = cublasScasum(a_elements(self), self->d_mem->d_ptr, 1);
+    return cublas_error("scasum") ? NULL : Py_BuildValue("f", sum);
+
+  } else {
+    cuda_Array* ones = make_vector(a_elements(self), self->a_dtype);
+ 
+    float sum = cublasSdot(a_elements(self), self->d_mem->d_ptr, 1, );
+    return cublas_error("sasum") ? NULL : Py_BuildValue("f", sum);
+  }
+}
+*/ 
+
+/**
+ * a method to create a copy of an array in cuda space
  */
 static PyObject* 
 cuda_Array_copy(cuda_Array *self) {
   cuda_Array *copy = copy_array(self);
   return (copy == NULL) ? NULL : Py_BuildValue("O", copy);
 }
+
+
+
 
 /***************************************************************************
  * helper methods for constructing arrays and vectors these are not part of
@@ -576,7 +695,7 @@ make_vector(int n, PyArray_Descr *dtype) {
       return NULL;
     }
 
-    self->a_dtype =  dtype;
+    self->a_dtype = dtype;
     Py_INCREF(self->a_dtype);
   }
   return self;
