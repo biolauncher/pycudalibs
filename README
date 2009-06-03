@@ -1,5 +1,5 @@
-Simple but powerful interface to CUDA libraries: cublas, cufft
-etc. Light weight abstractions of CUDA memory can be passed around,
+Simple but powerful interface to CUDA BLAS library.
+Light weight abstractions of CUDA memory can be passed around,
 resued, initialised and actualised in python. And can be cast into
 all CUDA compatible routines.
 
@@ -16,7 +16,8 @@ required in python (numpy) memory.
 It is hoped that this will encourage further algorithm development.
 
 So far single precision real vectors and matrices are supported -
-single complex coming soon.
+single complex now in place
+need some more linear algebra.
 
 Test harness under construction.
 ________
