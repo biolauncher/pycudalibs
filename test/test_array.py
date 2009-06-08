@@ -16,6 +16,7 @@ class TestArrayFactories(unittest.TestCase):
         self.complex_mat = [self.complex_vec for i in range(1,5)]
 
     # vectors
+
     def test_real_single_vector_array(self):
         # check shape, type and values
         A = cn.array(self.real_vec, dtype=cn.float32)

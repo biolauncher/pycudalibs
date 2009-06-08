@@ -60,8 +60,13 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
   //if (PyArg_ParseTuple(args, "O|O&", &object, PyArray_DescrConverter, &dtype)) {
   if (PyArg_ParseTupleAndKeywords(args, kwds, "O|O&", kwlist, &object, PyArray_DescrConverter, &dtype)) {
 
-    // default typecast
-    if (dtype == NULL) dtype = PyArray_DescrFromType(NPY_FLOAT32);
+    // default to dtype of the source 
+    if (dtype == NULL) dtype = PyArray_DESCR(object); 
+    
+    // check dtype is valid
+    if (dtype == NULL || !PyArray_DescrCheck(dtype))
+      dtype = PyArray_DescrFromType(NPY_FLOAT32);
+    
     Py_INCREF(dtype);
 
     // TODO: check acceptable data types
@@ -70,9 +75,10 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
 
     Py_INCREF(object);
     // cast supplied initialiser to a numpy array in required format checking dimensions
+    // added forcecast for sage interoperability (yetch)
     array = (PyArrayObject*) PyArray_FromAny(object, dtype, 
                                              DEVICE_ARRAY_MINDIMS, DEVICE_ARRAY_MAXDIMS, 
-                                             NPY_FORTRAN | NPY_ALIGNED, NULL);
+                                             NPY_FORTRAN | NPY_ALIGNED | NPY_FORCECAST, NULL);
     Py_DECREF(object);
 
     if (array == NULL) {
