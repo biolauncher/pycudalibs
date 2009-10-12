@@ -61,7 +61,7 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
   if (PyArg_ParseTupleAndKeywords(args, kwds, "O|O&", kwlist, &object, PyArray_DescrConverter, &dtype)) {
 
     // default to dtype of the source 
-    if (dtype == NULL) dtype = PyArray_DESCR(object); 
+    //if (dtype == NULL) dtype = PyArray_DESCR(object); 
     
     // check dtype is valid
     if (dtype == NULL || !PyArray_DescrCheck(dtype))
@@ -75,10 +75,10 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
 
     Py_INCREF(object);
     // cast supplied initialiser to a numpy array in required format checking dimensions
-    // added forcecast for sage interoperability (yetch)
+    // XXXX added NPY_FORCECAST for sage interoperability (yetch) then removed it again...
     array = (PyArrayObject*) PyArray_FromAny(object, dtype, 
                                              DEVICE_ARRAY_MINDIMS, DEVICE_ARRAY_MAXDIMS, 
-                                             NPY_FORTRAN | NPY_ALIGNED | NPY_FORCECAST, NULL);
+                                             NPY_FORTRAN | NPY_ALIGNED, NULL);
     Py_DECREF(object);
 
     if (array == NULL) {
@@ -233,13 +233,13 @@ static PyMethodDef cuda_Array_methods[] = {
   {"multiply", (PyCFunction) cuda_Array_scale, METH_VARARGS,
    "Element by element multiply."},
   {"copy", (PyCFunction) cuda_Array_copy, METH_VARARGS,
-   "Create a copy of an array using only device-device transfer."},
+   "Create a copy of a CUDA array using only device-device transfer."},
   {"norm", (PyCFunction) cuda_Array_2norm, METH_VARARGS,
    "The 2norm of a vector or Frobenius or Hilbert-Schmidt norm of a matrix."},
   {"asum", (PyCFunction) cuda_Array_asum, METH_VARARGS,
-   "The absolute sum of an array."},
+   "The absolute sum of a CUDA device array."},
   {"reshape", (PyCFunction) cuda_Array_reshape, METH_VARARGS,
-   "Reshape the dimensions of an cuda array."},
+   "Reshape the dimensions of a CUDA device array."},
 
   {NULL, NULL, 0, NULL} 
 };
@@ -336,7 +336,7 @@ cuda_Array_transpose(cuda_Array *self, PyObject *args) {
 
 /**
  * dot product - emulates numpy array and vector behaviour for taking inner-products
- * the monster of all methods - and this is just the single precision version!
+ * the mother of all methods - and this is just the single precision version!
  * we allocate and return result matrices as cuda_Array where appropriate but none of
  * this inccurs device <-> host memory transfers.
  * this method is overloaded for vectors and matrices with 64bit complex and float32 payloads

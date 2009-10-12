@@ -3,7 +3,7 @@
 /* 
  * This is the master header that should be included in all c extension modules in the package 
  * it defines the _cunumpy module which provides a cuda array type along the lines of numpy
- * it is the header file from hell... 
+ * Warning: this is the header file from hell... 
  */
 
 #if defined(_PYCUNUMPY_H)

@@ -76,6 +76,9 @@ class TestArrayFactories(unittest.TestCase):
         self.assert_(arrays_equal(A.toarray(), np.array(self.complex_mat, dtype=np.complex128)))
 
     # from miscellaneous numpy arrays - test casting
+    # REMOVED pro tem due to forcing casts on array creation. -  REVIEW 
+    # reinstated since this breaks current semantics of arrays
+
     def test_vector_cast_from_numpy_array(self):
         a = np.array([1,2,4,5])
         self.assertRaises(TypeError, cn.array, a)

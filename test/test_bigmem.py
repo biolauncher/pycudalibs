@@ -4,7 +4,7 @@ import numpy as np
 import math
 from _cunumpy import CUDAERROR
 
-# we will be testing linear algebra on CUDA we we need an approximation
+# we will be testing linear algebra on CUDA so we need an approximation YMMV
 def arrays_equal(a, b, epsilon=0.000001):
     return (abs(a-b) < epsilon).all()
 
@@ -16,7 +16,7 @@ class TestMemory(unittest.TestCase):
     def setUp(self):
         pass
 
-    # rewrite these to use a low level allocation of CUDA these seem to uncover leaks in numpy!
+    # rewrite these to use a low level allocation of CUDA: these seem to uncover leaks in numpy?
     def test_1024x1024(self):
         a = cn.array(np.random.rand(1024,1204), dtype=cn.float32)
     

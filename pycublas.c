@@ -7,10 +7,9 @@
 #define NO_IMPORT_ARRAY
 #include <pycublas.h>
 
-/////////////////////// TODO - this code is broken by recent architecture changes
-
 /** 
- * Low level CUDA BLAS library api.
+ * Low level CUDA BLAS library api. - there are bugs in the CUDA blas library that seem
+ * to ignore iniialization - but best to use it where indicated. 
  */
 
 static PyObject* init(PyObject* self, PyObject* args) {
@@ -35,7 +34,7 @@ static PyObject* shutdown(PyObject* self, PyObject* args) {
 /*
 sgemm - single precision real matrix-matrix multiply
 transa, transb, alpha, A, B, beta, C
-return the updated array C 
+return the updated array C
 */
 
 static PyObject* sgemm(PyObject* self, PyObject* args) {
@@ -63,7 +62,7 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
       return NULL;
     }
 
-    // XXX since transposed arrays will have had there dims swapped we need to swap again here
+    // XXX since transposed arrays will have had their dims swapped we need to swap again here
     int lda = A->a_dims[0];
     int ldb = B->a_dims[0];
     int ldc = C->a_dims[0];
@@ -87,7 +86,6 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
     return NULL;
   }
 }
-
 
 /*
 dgemm - double precision real matrix-matrix multiply
@@ -539,3 +537,4 @@ PyMODINIT_FUNC init_cublas(void) {
   if (module == NULL) return;
   import_cunumpy();
 }
+

@@ -5,7 +5,7 @@
 from distutils.core import setup, Extension
 
 # todo figure how to set these portably!
-numpyinclude =  '/Applications/sage/local/lib/python2.5/site-packages/numpy/core/include/numpy'
+numpyinclude =  '/Applications/sage/local/lib/python2.6/site-packages/numpy/core/include/numpy'
 cudainclude = '/usr/local/cuda/include'
 cudalib = '/usr/local/cuda/lib'
 

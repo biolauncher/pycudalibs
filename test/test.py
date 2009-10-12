@@ -32,7 +32,7 @@ print D
 print "D==C", D==C
     
 # store result
-r = D.nuarray()
+r = D.toarray()
 
 # do gold standard dot product
 s = numpy.dot(a,b)
