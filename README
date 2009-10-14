@@ -2,7 +2,8 @@ pycudalibs - simple but flexible interfaces to CUDA BLAS library.
 (C) Copyright 2009 Simon Beaumont - Model Sciences Ltd.
 ----------------------------------------------------------------
 
-I am releasing this code under GPL3 - see copyright.txt/COPYING
+I am releasing this code under LGPL3 - see copyright.txt,
+COPYING, COPYING.LESSER
 
 It is alpha grade (though it should work for the cases tested :) I
 would very much welcome collaboration and feedback, this code has not
@@ -43,7 +44,7 @@ operations are selected depending on the types of the operands.
 See test cases for examples. The best way to discover the
 functionality of the cuda array type is to create one in ipython and
 see what methods are currently implemented with tab completion.
-
+pr
 Warning: some of the unused test cases are for code that is known not
 to work or is deprecated at present. test_bugs is intended for
 regressions and reported bug fixes.  

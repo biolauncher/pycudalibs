@@ -1,13 +1,42 @@
-# Copyright (c) 2009 Simon Beaumont - All Rights Reserved
+#
+# Copyright (C) 2009 Model Sciences Ltd.
+#
+# This file is  part of pycudalibs
+#
+#    pycudalibs is free software: you can redistribute it and/or modify
+#    it under the terms of the Lesser GNU General Public License as
+#    published by the Free Software Foundation, either version 3 of the
+#    License, or (at your option) any later version.
+#
+#    Pycudalibs is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the Lesser GNU General Public
+#    License along with pycudalibs.  If not, see <http://www.gnu.org/licenses/>.  
+
 
 # python distutils setup for CUDA extension modules
 
 from distutils.core import setup, Extension
+import os
+import sys
 
-# todo figure how to set these portably!
-numpyinclude =  '/Applications/sage/local/lib/python2.6/site-packages/numpy/core/include/numpy'
-cudainclude = '/usr/local/cuda/include'
-cudalib = '/usr/local/cuda/lib'
+# force user to set these
+cuda = os.getenv('CUDA_HOME')
+if not cuda:
+    print 'Please set CUDA_HOME'
+    sys.exit(1)
+
+# is distutils numpy aware?
+numpyinclude = os.getenv('NUMPY_INCLUDE')
+if not numpyinclude:
+    print 'Please set NUMPY_INCLUDE'
+    sys.exit(3)
+
+cudainclude = cuda + '/include'
+cudalib = cuda + '/lib'
 
 # extension modules
 
@@ -37,7 +66,7 @@ setup (name = 'CuNumpy',
        author_email = 'seb@modelsciences.com',
        url = 'http://www.modelsciences.com',
        long_description = '''
-APIs for CUDA libraries with support for numpy arrays. Unreleased! Caveat Emptor!
+APIs for CUDA libraries with support for numpy arrays. see README.
 ''',
        ext_modules = [cunumpy, cublas],
        py_modules = ['cunumpy'],
