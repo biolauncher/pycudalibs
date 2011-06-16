@@ -1,3 +1,4 @@
+0. Must have python+numpy and CUDA development libraries installed
 1. Check/edit setup.py for local paths to numpy and CUDA 
    assumes python is on path and properly configured.
 2. python setup.py build
