@@ -33,9 +33,14 @@ OSX) the CUDA memory is not refreshed and CUDA memory is undefined. I
 have raised this issue several months ago with Nvidia but this will
 not be an easy fix as it seems to be an architectural limitation!
 
+2010: Update: I need to retest this with CUDA 4.0 drivers
+
 It is hoped that this will encourage further algorithm development.
 What we really want is Nvidia to provide a full implementation of
 LAPACK library in CUDA - there are rumours that this is in progress.
+
+2010 Update: See CULA libraries and PyCULA bindings (which use PyCUDA)
+and accommodates mixed BLAS/CUDA/CULA this is the future.
 
 So far single precision real and complex vectors and matrices are
 supported in an object oriented manner, where correct dot product
@@ -44,7 +49,7 @@ operations are selected depending on the types of the operands.
 See test cases for examples. The best way to discover the
 functionality of the cuda array type is to create one in ipython and
 see what methods are currently implemented with tab completion.
-pr
+
 Warning: some of the unused test cases are for code that is known not
 to work or is deprecated at present. test_bugs is intended for
 regressions and reported bug fixes.  
@@ -52,6 +57,7 @@ regressions and reported bug fixes.
 Synopsis:
 import cunumpy as cn
  
-Tested on OS X 10.5.*, CUDA 2.0-1  and python 2.5-6 YMMV
+Tested on OS X 10.5.*, CUDA 2.0-1  and Python 2.5-6
+2010 Update: now known to work with OS X 10.6.*, CUDA 4.0 and Python 2.7.1
 ________
 
