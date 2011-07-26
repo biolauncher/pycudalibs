@@ -91,7 +91,7 @@ static inline int cublas_error(char* where) {
 }
 
 #include <structmember.h>
-#include <arrayobject.h>
+#include <numpy/arrayobject.h>
 #include <pycumem.h>
 
 

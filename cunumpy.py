@@ -32,9 +32,9 @@ complex128 = numpy.complex128
 array_types = [float32, float64, complex64, complex128]
 
 #
-# extend _cunumpy.array
+# extend _cunumpy.array - XXX merely a wrapper
 #
-class CudaArray(_cunumpy.array):
+class CUDAarray(_cunumpy.array):
     """
     Encapsulates CUDA device based arrays and some CUBLAS based linear algebra in numpy style.
     """
@@ -45,22 +45,22 @@ class CudaArray(_cunumpy.array):
 #
 
 def array(*args, **keyw):
-    return CudaArray(numpy.array(*args, **keyw), **keyw)
+    return CUDAarray(numpy.array(*args, **keyw), **keyw)
 
 def arange(*args, **keyw):
-    return CudaArray(numpy.arange(*args, **keyw), **keyw)
+    return CUDAarray(numpy.arange(*args, **keyw), **keyw)
 
 def eye(*args, **keyw):
-    return CudaArray(numpy.eye(*args, **keyw), **keyw)
+    return CUDAarray(numpy.eye(*args, **keyw), **keyw)
 
 def zeros(*args, **keyw):
-    return CudaArray(numpy.zeros(*args, **keyw), **keyw)
+    return CUDAarray(numpy.zeros(*args, **keyw), **keyw)
 
 def ones(*args, **keyw):
-    return CudaArray(numpy.ones(*args, **keyw), **keyw)
+    return CUDAarray(numpy.ones(*args, **keyw), **keyw)
 
 def identity(*args, **keyw):
-    return CudaArray(numpy.identity(*args, **keyw), **keyw)
+    return CUDAarray(numpy.identity(*args, **keyw), **keyw)
 
 
 

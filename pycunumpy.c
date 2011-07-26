@@ -265,6 +265,8 @@ static PyMethodDef cuda_Array_methods[] = {
  * getters and setters
  *********************/
 
+//TODO for CULA integration experiment: here's where we can expose the underyling device memory
+
 static PyGetSetDef cuda_Array_properties[] = {
   {"shape", (getter) cuda_Array_getShape, (setter) NULL, 
    "shape of device array", NULL},

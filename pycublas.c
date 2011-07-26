@@ -26,7 +26,7 @@ This file is part of pycudalibs
 
 /** 
  * Low level CUDA BLAS library api. - there are bugs in the CUDA blas library that seem
- * to ignore iniialization - but best to use it where indicated. 
+ * to ignore initialization - but best to use it where indicated. 
  */
 
 static PyObject* init(PyObject* self, PyObject* args) {
@@ -65,7 +65,7 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
                        cuda_ArrayType, &B, 
                        &beta, cuda_ArrayType, &C)) {
 
-    // XXX new setup for index twiddling transpose - this now goes - but see below
+    // XXX new setup for index twiddling transpose
     int m = transa == 't' ? A->a_dims[1] : A->a_dims[0];
     int k = transa == 't' ? A->a_dims[0] : A->a_dims[1]; 
     int kb = transb == 't' ? B->a_dims[1] : B->a_dims[0];
@@ -79,7 +79,7 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
       return NULL;
     }
 
-    // XXX since transposed arrays will have had their dims swapped we need to swap again here
+    // leading dimensions 
     int lda = A->a_dims[0];
     int ldb = B->a_dims[0];
     int ldc = C->a_dims[0];
@@ -215,7 +215,8 @@ static PyObject* cgemm(PyObject* self, PyObject* args) {
                    int lda, const cuComplex *B, int ldb, 
                    cuComplex beta, cuComplex *C, int ldc) 
     */
-    cublasCgemm(transa, transb, m, n, k, c_alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, c_beta, C->d_mem->d_ptr, ldc);
+    cublasCgemm(transa, transb, m, n, k, c_alpha, 
+                A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, c_beta, C->d_mem->d_ptr, ldc);
 
     if (cublas_error("cgemm")) 
       return NULL;
@@ -278,7 +279,8 @@ static PyObject* zgemm(PyObject* self, PyObject* args) {
                    int lda, const cuDoubleComplex *B, int ldb, 
                    cuDoubleComplex beta, cuDoubleComplex *C, int ldc) 
     */
-    cublasZgemm(transa, transb, m, n, k, c_alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, c_beta, C->d_mem->d_ptr, ldc);
+    cublasZgemm(transa, transb, m, n, k, c_alpha, 
+                A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, c_beta, C->d_mem->d_ptr, ldc);
 
     if (cublas_error("zgemm")) 
       return NULL;
@@ -449,13 +451,14 @@ static PyObject* cdotu(PyObject* self, PyObject* args) {
 
     if (cublas_error("cdotu")) 
       return NULL;
-    else {
 
+    else {
       Py_complex ip;
       ip.real = (double) cip.x;
       ip.imag = (double) cip.y;
       return Py_BuildValue("D", &ip);
     }
+
   } else {
     return NULL;
   }
