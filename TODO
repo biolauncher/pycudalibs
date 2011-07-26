@@ -1,0 +1,7 @@
+1. Create appropriate headers for low level CULA/LAPACK interfaces (copy BLAS examples)
+2. rename all BLAS functions
+3. rebuild and test agianst CULA libs
+4. introduce LAPACK functions - by need (single prec, complex and real) svd, eigen problems etc.
+5. test cases for 4.
+6. rebuild and test.
+7. go figure...

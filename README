@@ -1,63 +1,20 @@
-pycudalibs - simple but flexible interfaces to CUDA BLAS library.  
-(C) Copyright 2009 Simon Beaumont - Model Sciences Ltd.
-----------------------------------------------------------------
+pycudalibs - simple but flexible interfaces to CUDA BLAS an CULA LAPACK libraries.  
+(C) Copyright 2009-2011 Simon Beaumont - Model Sciences Ltd.
+----------------------------------------------------------------------------------
 
-I am releasing this code under LGPL3 - see copyright.txt,
-COPYING, COPYING.LESSER
+I am releasing this code under LGPL3 - see copyright.txt, COPYING, COPYING.LESSER
 
-It is alpha grade (though it should work for the cases tested :) I
-would very much welcome collaboration and feedback, this code has not
-advanced much in recent months as I wanted to create a numpy/scipy-like
-interpreter for CUDA based scientific computation and have been
-thwarted by the restriction below - that and the ongoing need to hand
-implement more sophisticated linear algebra from a subset of BLAS. 
-
-Light weight abstractions of CUDA memory can be created and 
-initialised in python with object oriented numpy like behaviour. 
-
-Numpy arrays my be used to perform host to device initialization by
-copying and CudaArrays may return host numpy arrays (see: toarray
-method). Dot products for vectors and matrices (in any combination)
-are provided in an object oriented manner.
-
-Automatic (reference counted garbage collection is performed) and
-reshaping, transpose are constant time (bit twiddling) operations.
-All the linear algebra is implemented using the CUDA BLAS library and
-done on the device. Thus algorithms may be created in python that do
-not inccur host to device and device to host copy operation overheads
-until final results are required in python (numpy) memory.
-
-N.B. One major caveat is that if you use references to CUDA arrays in
-python interpreter such as ipython and the system sleeps (at least on
-OSX) the CUDA memory is not refreshed and CUDA memory is undefined. I
-have raised this issue several months ago with Nvidia but this will
-not be an easy fix as it seems to be an architectural limitation!
-
-2010: Update: I need to retest this with CUDA 4.0 drivers
-
-It is hoped that this will encourage further algorithm development.
-What we really want is Nvidia to provide a full implementation of
-LAPACK library in CUDA - there are rumours that this is in progress.
-
-2010 Update: See CULA libraries and PyCULA bindings (which use PyCUDA)
-and accommodates mixed BLAS/CUDA/CULA this is the future.
-
-So far single precision real and complex vectors and matrices are
-supported in an object oriented manner, where correct dot product
-operations are selected depending on the types of the operands.
-
-See test cases for examples. The best way to discover the
-functionality of the cuda array type is to create one in ipython and
-see what methods are currently implemented with tab completion.
-
-Warning: some of the unused test cases are for code that is known not
-to work or is deprecated at present. test_bugs is intended for
-regressions and reported bug fixes.  
+This branch has been made to see if we can easily integrate the CULA
+LAPACK libraries and leverage the performance improvements to CULA
+BLAS implementations.  CULA is proprietary (though very reasonbly
+priced for research) and there is free version with single
+precision functions. See: http://www.culatools.com/
 
 Synopsis:
 import cunumpy as cn
  
-Tested on OS X 10.5.*, CUDA 2.0-1  and Python 2.5-6
-2010 Update: now known to work with OS X 10.6.*, CUDA 4.0 and Python 2.7.1
+Tested on:
+OS X 10.5.*, CUDA 2.0-1 and Python 2.5-6
+OS X 10.6.*, CUDA 4.0   and Python 2.7.1
 ________
 
