@@ -31,14 +31,17 @@ complex128 = numpy.complex128
 
 array_types = [float32, float64, complex64, complex128]
 
+# TODO: library object that takes care of init and CUDA device association etc.
 # XXX init library/cuda device
 _cublas.init()
+
+
 #
 # extend _cunumpy.array - XXX merely a wrapper
 #
 class CUDAarray(_cunumpy.array):
     """
-    Encapsulates CUDA device based arrays and some CUBLAS based linear algebra in numpy style.
+    Encapsulates CUDA device based arrays numpy style.
     """
     pass
 

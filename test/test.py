@@ -1,49 +1,15 @@
-import numpy
-import _cunumpy
-import _cublas
+# module of support routines for testing
+import numpy as np
 
+# we will be testing linear algebra on CUDA we we need an approximation
+def arrays_equal(a, b, epsilon=0.000001):
+    return np.allclose(a,b)
+    #return (abs(a-b) < epsilon).all()
 
-_cublas.init()
+def close(a, b, rtol=1e-05, atol=1e-08):
+    return abs(a - b) <= (atol + rtol * abs(b))
 
-# create a vector
-v = numpy.arange(1,100,dtype=numpy.float32)
-V = _cunumpy.array(v)
-print "V=", V
-
-# create a matrix
-a = numpy.array(numpy.random.rand(17, 20), dtype=numpy.float32)
-A = _cunumpy.array(a)
-print "A=", A
-
-# create another matrix
-b = numpy.array(numpy.random.rand(20, 50), dtype=numpy.float32)
-B = _cunumpy.array(b)
-print "B=", B
-
-# create a third target matrix
-c = numpy.zeros((17,50),dtype=numpy.float32)
-C = _cunumpy.array(c)
-print "C=", C
-
-
-# do sgemm - as plain dot product
-D = _cublas.sgemm('n', 'n', 1.0, A, B, 0.0, C)
-print D
-print "D==C", D==C
-    
-# store result
-r = D.toarray()
-
-# do gold standard dot product
-s = numpy.dot(a,b)
-
-print "e =", numpy.sum(numpy.abs(r-s))
-
-
-# now present misshaped arrays
-try:
-    E = _cublas.sgemm('n', 'n', 1.0, B, A, 0.0, C)
-except ValueError, e:
-    print e
-
-print "passed"
+def scalars_equal(a, b, epsilon=0.00004):
+    #print a, b, abs(a-b)
+    return close(a, b)
+    #return abs(a-b) < epsilon

@@ -3,14 +3,7 @@ import cunumpy as cn
 import numpy as np
 import scipy.linalg as lalg
 import math
-
-# we will be testing linear algebra on CUDA we we need an approximation
-def arrays_equal(a, b, epsilon=0.000001):
-    return (abs(a-b) < epsilon).all()
-
-def scalars_equal(a, b, epsilon=0.00004):
-    #print a, b, abs(a-b)
-    return abs(a-b) < epsilon
+import test
 
 class TestMath(unittest.TestCase):
     
@@ -31,7 +24,7 @@ class TestMath(unittest.TestCase):
         # numpy
         a = np.array(self.real_veca, dtype=np.float32)
         b = np.multiply(a, math.pi)
-        self.assert_(arrays_equal(B.toarray(), b)) 
+        self.assert_(test.arrays_equal(B.toarray(), b)) 
 
     def test_scalez_complex_vector(self):
         A = cn.array(self.complex_veca, dtype=cn.complex64)
@@ -39,7 +32,7 @@ class TestMath(unittest.TestCase):
         # numpy
         a = np.array(self.complex_veca, dtype=np.complex64)
         b = np.multiply(a, math.pi+1.37j)
-        self.assert_(arrays_equal(B.toarray(), b)) 
+        self.assert_(test.arrays_equal(B.toarray(), b)) 
 
     def test_scale_complex_vector(self):
         A = cn.array(self.complex_veca, dtype=cn.complex64)
@@ -47,7 +40,7 @@ class TestMath(unittest.TestCase):
         # numpy
         a = np.array(self.complex_veca, dtype=np.complex64)
         b = np.multiply(a, math.pi)
-        self.assert_(arrays_equal(B.toarray(), b)) 
+        self.assert_(test.arrays_equal(B.toarray(), b)) 
 
     def test_scalez_real_vector(self):
         A = cn.array(self.real_veca, dtype=cn.float32)
@@ -61,7 +54,7 @@ class TestMath(unittest.TestCase):
         # numpy
         a = np.array(self.real_mata, dtype=np.float32)
         b = np.multiply(a, math.pi)
-        self.assert_(arrays_equal(B.toarray(), b)) 
+        self.assert_(test.arrays_equal(B.toarray(), b)) 
 
     def test_scalez_complex_matrix(self):
         A = cn.array(self.complex_mata, dtype=cn.complex64)
@@ -69,7 +62,7 @@ class TestMath(unittest.TestCase):
         # numpy
         a = np.array(self.complex_mata, dtype=np.complex64)
         b = np.multiply(a, math.pi+1.37j)
-        self.assert_(arrays_equal(B.toarray(), b)) 
+        self.assert_(test.arrays_equal(B.toarray(), b)) 
 
     def test_scale_complex_matrix(self):
         A = cn.array(self.complex_mata, dtype=cn.complex64)
@@ -77,7 +70,7 @@ class TestMath(unittest.TestCase):
         # numpy
         a = np.array(self.complex_mata, dtype=np.complex64)
         b = np.multiply(a, math.pi)
-        self.assert_(arrays_equal(B.toarray(), b)) 
+        self.assert_(test.arrays_equal(B.toarray(), b)) 
 
     def test_scalez_real_matrix(self):
         A = cn.array(self.real_mata, dtype=cn.float32)
@@ -90,25 +83,25 @@ class TestMath(unittest.TestCase):
         A = cn.array(self.real_veca, dtype=cn.float32)
         # numpy
         a = np.array(self.real_veca, dtype=np.float32)
-        self.assert_(scalars_equal(lalg.norm(a), A.norm()))
+        self.assert_(test.scalars_equal(lalg.norm(a), A.norm()))
 
     def test_norm_real_matrix(self):
         A = cn.array(self.real_mata, dtype=cn.float32)
         # numpy
         a = np.array(self.real_mata, dtype=np.float32)
-        self.assert_(scalars_equal(lalg.norm(a), A.norm()))
+        self.assert_(test.scalars_equal(lalg.norm(a), A.norm()))
 
     def test_norm_complex_vector(self):
         A = cn.array(self.complex_veca, dtype=cn.complex64)
         # numpy
         a = np.array(self.complex_veca, dtype=np.complex64)
-        self.assert_(scalars_equal(lalg.norm(a), A.norm()))
+        self.assert_(test.scalars_equal(lalg.norm(a), A.norm()))
 
     def test_norm_complex_matrix(self):
         A = cn.array(self.complex_mata, dtype=cn.complex64)
         # numpy
         a = np.array(self.complex_mata, dtype=np.complex64)
-        self.assert_(scalars_equal(lalg.norm(a), A.norm()))
+        self.assert_(test.scalars_equal(lalg.norm(a), A.norm()))
 
     # asum - asum is not much use anyway not even a proper L1 norm for complex
 
@@ -116,25 +109,25 @@ class TestMath(unittest.TestCase):
         A = cn.array(self.real_veca, dtype=cn.float32)
         # numpy
         a = np.array(self.real_veca, dtype=np.float32)
-        self.assert_(scalars_equal(np.sum(np.abs(a)), A.asum()))
+        self.assert_(test.scalars_equal(np.sum(np.abs(a)), A.asum()))
 
     def test_asum_real_matrix(self):
         A = cn.array(self.real_mata, dtype=cn.float32)
         # numpy
         a = np.array(self.real_mata, dtype=np.float32)
-        self.assert_(scalars_equal(np.sum(np.abs(a)), A.asum()))
+        self.assert_(test.scalars_equal(np.sum(np.abs(a)), A.asum()))
 
     def test_asum_complex_vector(self):
         A = cn.array(self.complex_veca, dtype=cn.complex64)
         # numpy
         a = np.array(self.complex_veca, dtype=np.complex64)
-        self.assert_(scalars_equal(np.sum(np.abs(a)), A.asum()))
+        self.assert_(test.scalars_equal(np.sum(np.abs(a)), A.asum()))
 
     def test_asum_complex_matrix(self):
         A = cn.array(self.complex_mata, dtype=cn.complex64)
         # numpy
         a = np.array(self.complex_mata, dtype=np.complex64)
-        self.assert_(scalars_equal(np.sum(np.abs(a)), A.asum()))
+        self.assert_(test.scalars_equal(np.sum(np.abs(a)), A.asum()))
     
 
 def suite_single():

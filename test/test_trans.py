@@ -2,13 +2,7 @@ import unittest
 import cunumpy as cn
 import numpy as np
 import math
-
-# we will be testing linear algebra on CUDA we we need an approximation
-def arrays_equal(a, b, epsilon=0.000001):
-    return (abs(a-b) < epsilon).all()
-
-def scalars_equal(a, b, epsilon=0.00001):
-    return abs(a-b) < epsilon
+import test
 
 class TestTranspose(unittest.TestCase):
     
@@ -26,18 +20,18 @@ class TestTranspose(unittest.TestCase):
     def test_vector_transpose_identity(self):
         # transpose is a noop for vectors - they are always columns
         v = cn.array(self.real_veca, dtype=cn.float32)
-        self.assert_(arrays_equal(v.T.toarray(), v.toarray()))
+        self.assert_(test.arrays_equal(v.T.toarray(), v.toarray()))
 
     def test_matrix_transpose_identity(self):
         a = cn.array(self.real_mata, dtype=cn.float32)
-        self.assert_(arrays_equal(a.toarray(), a.T.T.toarray()))
+        self.assert_(test.arrays_equal(a.toarray(), a.T.T.toarray()))
 
     def test_linalg_transpose_identity(self):
         a = cn.array(self.real_mata, dtype=cn.float32)
         b = cn.array(self.real_matb, dtype=cn.float32)
         c = a.dot(b)
         d = b.T.dot(a.T).T
-        self.assert_(arrays_equal(c.toarray(), d.toarray(), epsilon=0.05))
+        self.assert_(test.arrays_equal(c.toarray(), d.toarray(), epsilon=0.05))
 
 
 def suite_single():
