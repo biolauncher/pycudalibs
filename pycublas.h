@@ -21,6 +21,4 @@ This file is part of pycudalibs
 #else
 #define _PYCUBLAS_H 1
 #include <pycunumpy.h>
-
-
 #endif

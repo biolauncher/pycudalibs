@@ -17,22 +17,24 @@ This file is part of pycudalibs
     License along with pycudalibs.  If not, see <http://www.gnu.org/licenses/>.  
 */
 
+ 
 /**
- * Python integration to CUDA BLAS routines.
+ * Python integration to CULA/CUDA BLAS routines.
  *  defines module: _cublas 
  */
 #define NO_IMPORT_ARRAY
 #include <pycublas.h>
 
+#ifdef CULA
+
 /** 
- * Low level CUDA BLAS library api. - there are bugs in the CUDA blas library that seem
- * to ignore initialization - but best to use it where indicated. 
+ * Low level CULA BLAS library api.
  */
 
 static PyObject* init(PyObject* self, PyObject* args) {
   if (!PyArg_ParseTuple(args, "")) 
     return NULL;
-  else if (cuda_error(cublasInit(), "cublasInit"))
+  else if (cula_error(culaInitialize(), "culaInitialize"))
     return NULL;
   else 
     return Py_BuildValue("");
@@ -41,12 +43,12 @@ static PyObject* init(PyObject* self, PyObject* args) {
 static PyObject* shutdown(PyObject* self, PyObject* args) {
   if (!PyArg_ParseTuple(args, "")) 
     return NULL;
-  else if (cuda_error(cublasShutdown(), "cublasShutdown"))
-    return NULL;
-  else
+  // culaShutdown doesn't return any value
+  else {
+    culaShutdown();
     return Py_BuildValue("");
+  }
 }
-
 
 /*
 sgemm - single precision real matrix-matrix multiply
@@ -91,10 +93,10 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
                    const float *B, int ldb, float beta, 
                    float *C, int ldc)
     */
-    cublasSgemm(transa, transb, m, n, k, alpha, 
-                A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
+    culaSgemm(transa, transb, m, n, k, alpha, 
+              A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
 
-    if (cublas_error("sgemm")) 
+    if (culablas_error("sgemm")) 
       return NULL;
     else 
       return Py_BuildValue("O", C);
@@ -147,9 +149,9 @@ static PyObject* dgemm(PyObject* self, PyObject* args) {
                    const double *B, int ldb, double beta, 
                    double *C, int ldc)
     */
-    cublasDgemm(transa, transb, m, n, k, alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
+    culaDgemm(transa, transb, m, n, k, alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
 
-    if (cublas_error("dgemm")) 
+    if (culablas_error("dgemm")) 
       return NULL;
     else 
       return Py_BuildValue("O", C);
@@ -182,8 +184,8 @@ static PyObject* cgemm(PyObject* self, PyObject* args) {
        this routine we use 0 and 1 as alpha and beta parameters but
        this comment is the only warning */
 
-    cuComplex c_alpha;
-    cuComplex c_beta;
+    culaFloatComplex c_alpha;
+    culaFloatComplex c_beta;
 
     c_alpha.x = (float) alpha.real;
     c_alpha.y = (float) alpha.imag;
@@ -215,10 +217,10 @@ static PyObject* cgemm(PyObject* self, PyObject* args) {
                    int lda, const cuComplex *B, int ldb, 
                    cuComplex beta, cuComplex *C, int ldc) 
     */
-    cublasCgemm(transa, transb, m, n, k, c_alpha, 
-                A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, c_beta, C->d_mem->d_ptr, ldc);
+    culaCgemm(transa, transb, m, n, k, c_alpha, 
+              A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, c_beta, C->d_mem->d_ptr, ldc);
 
-    if (cublas_error("cgemm")) 
+    if (culablas_error("cgemm")) 
       return NULL;
     else 
       return Py_BuildValue("O", C);
@@ -246,8 +248,8 @@ static PyObject* zgemm(PyObject* self, PyObject* args) {
                        cuda_ArrayType, &B, 
                        &beta, cuda_ArrayType, &C)) {
 
-    cuDoubleComplex c_alpha;
-    cuDoubleComplex c_beta;
+    culaDoubleComplex c_alpha;
+    culaDoubleComplex c_beta;
 
     c_alpha.x = alpha.real;
     c_alpha.y = alpha.imag;
@@ -279,10 +281,10 @@ static PyObject* zgemm(PyObject* self, PyObject* args) {
                    int lda, const cuDoubleComplex *B, int ldb, 
                    cuDoubleComplex beta, cuDoubleComplex *C, int ldc) 
     */
-    cublasZgemm(transa, transb, m, n, k, c_alpha, 
-                A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, c_beta, C->d_mem->d_ptr, ldc);
+    culaZgemm(transa, transb, m, n, k, c_alpha, 
+              A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, c_beta, C->d_mem->d_ptr, ldc);
 
-    if (cublas_error("zgemm")) 
+    if (culablas_error("zgemm")) 
       return NULL;
     else 
       return Py_BuildValue("O", C);
@@ -291,6 +293,69 @@ static PyObject* zgemm(PyObject* self, PyObject* args) {
     return NULL;
   }
 }
+
+
+/*
+sgemv - single precision real matrix-vector multiply
+transa, alpha, A, B, beta, C
+return the updated array C 
+*/
+ 
+static PyObject* sgemv(PyObject* self, PyObject* args) {
+  cuda_Array *A, *B, *C;
+  float alpha, beta;
+  char transa;
+
+  if (PyArg_ParseTuple(args, "cfO!O!fO!", 
+                       &transa, &alpha, 
+                       cuda_ArrayType, &A, 
+                       cuda_ArrayType, &B, &beta, 
+                       cuda_ArrayType, &C)) {
+
+    // new setup for index twiddling transpose
+    int m = transa == 't' ? A->a_dims[1] : A->a_dims[0];
+    int k = transa == 't' ? A->a_dims[0] : A->a_dims[1]; 
+    int kb = B->a_dims[0];
+    int n = B->a_dims[1];
+    int mc = C->a_dims[0];
+    int nc = C->a_dims[1];
+
+    // check geometry is good
+    if (k != kb || m != mc || n != nc) {
+      PyErr_SetString(PyExc_ValueError, "matrices have wrong shapes for matrix-vector mutiplication");
+      return NULL;
+    }
+
+    int lda = A->a_dims[0];
+
+    /*
+     void 
+     cublasSgemv (char trans, int m, int n, float alpha, 
+                  const float *A, int lda, const float *x,  
+                  int incx, float beta, float *y, int incy)
+    */
+    culaSgemv(transa, m, n, alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, 1, beta, C->d_mem->d_ptr, 1);
+    
+    if (culablas_error("sgemv")) 
+      return NULL;
+    else 
+      return Py_BuildValue("O", C);
+  
+  } else {
+    return NULL;
+  }
+}
+
+#endif //CULA
+
+// TODO reinstate CUDA implementations of above
+
+
+/** 
+ * vector-vector BLAS operations are provided by standard cuBLAS
+ */
+
+#ifdef CUBLAS
 
 /*
 sdot - single precision real vector-vector dot product
@@ -329,63 +394,11 @@ static PyObject* sdot(PyObject* self, PyObject* args) {
   }
 }
 
-
-/*
-sgemv - single precision real matrix-vector multiply
-transa, alpha, A, B, beta, C
-return the updated array C 
-*/
-
-static PyObject* sgemv(PyObject* self, PyObject* args) {
-  cuda_Array *A, *B, *C;
-  float alpha, beta;
-  char transa;
-
-  if (PyArg_ParseTuple(args, "cfO!O!fO!", 
-                       &transa, &alpha, 
-                       cuda_ArrayType, &A, 
-                       cuda_ArrayType, &B, &beta, 
-                       cuda_ArrayType, &C)) {
-
-    // new setup for index twiddling transpose
-    int m = transa == 't' ? A->a_dims[1] : A->a_dims[0];
-    int k = transa == 't' ? A->a_dims[0] : A->a_dims[1]; 
-    int kb = B->a_dims[0];
-    int n = B->a_dims[1];
-    int mc = C->a_dims[0];
-    int nc = C->a_dims[1];
-
-    // check geometry is good
-    if (k != kb || m != mc || n != nc) {
-      PyErr_SetString(PyExc_ValueError, "matrices have wrong shapes for matrix-vector mutiplication");
-      return NULL;
-    }
-
-    int lda = A->a_dims[0];
-
-    /*
-     void 
-     cublasSgemv (char trans, int m, int n, float alpha, 
-                  const float *A, int lda, const float *x,  
-                  int incx, float beta, float *y, int incy)
-    */
-    cublasSgemv(transa, m, n, alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, 1, beta, C->d_mem->d_ptr, 1);
-
-    if (cublas_error("sgemv")) 
-      return NULL;
-    else 
-      return Py_BuildValue("O", C);
-  
-  } else {
-    return NULL;
-  }
-}
-
-
 /*
 ddot - double precision real vector-vector dot product
 returns a python double
 */
+
 
 static PyObject* ddot(PyObject* self, PyObject* args) {
   cuda_Array *A, *B;
@@ -507,6 +520,7 @@ static PyObject* cdotc(PyObject* self, PyObject* args) {
   }
 }
 
+#endif // CUBLAS
 
 /************************
  * module function table
@@ -528,7 +542,7 @@ static PyMethodDef _cublas_methods[] = {
   {"sgemv", sgemv, METH_VARARGS,
    "Single Precision BLAS2 float matrix vector multiply: C = alpha * op(A) * B + beta * C"},
 
-
+#ifdef CUBLAS
   {"sdot", sdot, METH_VARARGS,
    "Single Precision BLAS1 real vector dot product"},
   {"ddot", ddot, METH_VARARGS,
@@ -538,16 +552,13 @@ static PyMethodDef _cublas_methods[] = {
    "Double Precision BLAS1 complex vector dot product"},
   {"cdotc", cdotc, METH_VARARGS,
    "Double Precision BLAS1 complex vector transpose dot product "},
-
+#endif 
 
   {"close", shutdown, METH_VARARGS,
    "Releases CPU‐side resources used by the CUBLAS library."},
   {NULL, NULL, 0, NULL}
 };
 
-
-/* define an exception object for cublas */
-//static PyObject* cublas_exception; // why are we not using this?
 
 /* initialise the Python c extension module - this function has to be named consistently */
 

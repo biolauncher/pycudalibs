@@ -34,6 +34,7 @@ This file is part of pycudalibs
 typedef struct {
   PyObject_HEAD
   void* d_ptr;                       /* opaque device pointer */
+  int d_pitch;                       /* allocated pitch of array */
 } cuda_Memory;
 
 
@@ -48,7 +49,7 @@ cuda_Memory_dealloc(cuda_Memory* self) {
   self->ob_type->tp_free((PyObject*)self);
 
   if (self->d_ptr != NULL) 
-    if (cuda_error(cublasFree(self->d_ptr), "dealloc:cublasFree"))
+    if (cuda_error(culaDeviceFree(self->d_ptr), "dealloc:culaDeviceFree"))
       return;
 }
 
@@ -63,6 +64,7 @@ cuda_Memory_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     
   if (self != NULL) {
     self->d_ptr = NULL;
+    self->d_pitch = 0;
   }
   
   return (PyObject *)self;
@@ -122,14 +124,16 @@ static PyTypeObject cuda_MemoryType = {
  * create a new object and the required memory to manage
  */
 static inline cuda_Memory*
-alloc_cuda_Memory(int n, int size) {
+alloc_cuda_Memory(int rows, int cols, int esize) {
   
   cuda_Memory *self = (cuda_Memory *) _PyObject_New(&cuda_MemoryType);
   
   if (self != NULL) {
     self->d_ptr = NULL;
+    self->d_pitch = 0;
 
-    if (cuda_error(cublasAlloc(n, size, (void**) &self->d_ptr), "cuda_Memory:cublasAlloc")) {
+    if (cuda_error(culaDeviceMalloc((void**) &self->d_ptr, &self->d_pitch, rows, cols, esize),
+                   "cuda_Memory:culaDeviceMalloc")) {
       return NULL;
     }
   }
@@ -143,7 +147,6 @@ static inline int
 init_cuda_MemoryType(void) {
   return PyType_Ready(&cuda_MemoryType);
 }
-
 
 #endif
 

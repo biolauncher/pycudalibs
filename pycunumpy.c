@@ -116,10 +116,10 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
 
       int n_elements = a_elements(self);
 
-      // alloc
+      // alloc XXX now rows, cols, esize XXX
       trace("TRACE cuda_Array_init: elements: %d element_size: %d\n", n_elements, self->e_size);
 
-      if ((self->d_mem = alloc_cuda_Memory(n_elements, self->e_size)) == NULL) {
+      if ((self->d_mem = alloc_cuda_Memory(self->a_dims[0], self->a_dims[1], self->e_size)) == NULL) {
         Py_DECREF(array);
         Py_DECREF(dtype);
         return -1;
@@ -695,8 +695,6 @@ cuda_Array_copy(cuda_Array *self) {
 }
 
 
-
-
 /***************************************************************************
  * helper methods for constructing arrays and vectors these are not part of
  * the public api
@@ -716,7 +714,8 @@ make_vector(int n, PyArray_Descr *dtype) {
     self->a_transposed = 0; 
     self->d_mem = NULL;
 
-    if ((self->d_mem = alloc_cuda_Memory(n, self->e_size)) == NULL) {
+    // alloc XXX now rows, cols, esize XXX
+    if ((self->d_mem = alloc_cuda_Memory(self->a_dims[0], self->a_dims[1], self->e_size)) == NULL) {
       return NULL;
     }
 
@@ -741,7 +740,8 @@ make_matrix(int m, int n, PyArray_Descr *dtype) {
     self->a_transposed = 0; 
     self->d_mem = NULL;
 
-    if ((self->d_mem = alloc_cuda_Memory(m*n, self->e_size)) == NULL) {
+    // alloc XXX now rows, cols, esize XXX
+    if ((self->d_mem = alloc_cuda_Memory(m, n, self->e_size)) == NULL) {
       return NULL;
     }
 
@@ -772,7 +772,8 @@ copy_array(cuda_Array* self) {
     new->a_transposed = self->a_transposed; 
     new->d_mem = NULL;
 
-    if ((new->d_mem = alloc_cuda_Memory(a_elements(self), new->e_size)) == NULL) {
+    // alloc XXX now rows, cols, esize XXX
+    if ((new->d_mem = alloc_cuda_Memory(new->a_dims[0], new->a_dims[1], new->e_size)) == NULL) {
       return NULL;
     }
 
@@ -790,7 +791,7 @@ copy_array(cuda_Array* self) {
     new->a_dtype = self->a_dtype;
     Py_INCREF(new->a_dtype);
   }
-  // don't return this to python directly.
+  // XXX don't return this to python user directly.
   return new;
 }
 

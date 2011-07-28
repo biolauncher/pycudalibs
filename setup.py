@@ -24,17 +24,25 @@ import distutils.sysconfig as dsys
 import os
 import sys
 
-# force user to set these
+# CUDA
 cuda = os.getenv('CUDA_HOME')
 if not cuda:
-    print 'Please set CUDA_HOME to the root of the CUDA (or CULA) package (usually /usr/local/cu(d|l)a)'
+    print 'Please set CUDA_HOME to the root of the CUDA package (usually /usr/local/cuda)'
     sys.exit(1)
 
 cuda_include = cuda + '/include'
 cuda_lib = cuda + '/lib'
-
-# actually only CULA provides this - so check for architecture and existence below
 cuda_lib64 = cuda + '/lib64'
+
+# CULA
+cula = os.getenv('CULA_HOME')
+if not cula:
+    print 'Please set CULA_HOME to the root of the CULA package (usually /usr/local/cula)'
+    sys.exit(2)
+
+cula_include = cula + '/include'
+cula_lib = cula + '/lib'
+cula_lib64 = cula + '/lib64'
 
 
 # get numpy includes
@@ -46,48 +54,55 @@ except:
     print 'Cannot import numpy.distutils - is numpy installed?'
     sys.exit(3)
 if not numpy_includes:
-    print 'No numpy include directories! Build may fail...'
+    print 'No numpy include directories found - is numpy installed?'
+    sys.exit(4)
 
-#
-includes = ['.', cuda_include] + numpy_includes
+    
+# OK to try and build
+includes = ['.', cula_include, cuda_include] + numpy_includes
 
-# 64bit libs supported and available?
-if dsys.get_config_var("SIZEOF_LONG") == 8 and os.path.exists(cuda_lib64):
-    library_dirs = [cuda_lib64]
+# ensure CULA libraries come before CUDA - why?
+# are 64 bit libs supported and available?
+if dsys.get_config_var("SIZEOF_LONG") == 8 and os.path.exists(cuda_lib64) and os.path.exists(cula_lib64):
+    library_dirs = [cula_lib64, cuda_lib64]
+    print 'Building with 64 bit libraries' 
 else:
-    library_dirs = [cuda_lib]
+    library_dirs = [cula_lib, cuda_lib]
     
 #####################
 # extension modules #
 #####################
 
-## TODO need macros for the includes since CULA call their's culablas and NVidia cublas!
-## actually these are not plug compatible at all as functions have been renamed as well as
-## include files and libraries... bah!
-
+# libraries
 BLAS = 'cublas'
 LAPACK = 'cula'
 #
 
 cunumpy = Extension('_cunumpy',
-                    define_macros = [('MAJOR_VERSION', '0'),
-                                     ('MINOR_VERSION', '1'),
-                                     ('DEBUG', '0')],
+                    define_macros = [
+                        #('CUBLAS', '1'),
+                        #('CULA', '1'),
+                        ('MAJOR_VERSION', '1'),
+                        ('MINOR_VERSION', '0'),
+                        ('DEBUG', '0')],
                     include_dirs = includes,
-                    libraries = [BLAS],
+                    libraries = [BLAS, LAPACK],
                     library_dirs = library_dirs,
                     sources = ['pycunumpy.c'])
 
 cublas = Extension('_cublas',
-                   define_macros = [('MAJOR_VERSION', '0'),
-                                    ('MINOR_VERSION', '1'),
-                                    ('DEBUG', '0')],
+                   define_macros = [
+                       ('CUBLAS', '1'),
+                       ('CULA', '1'),
+                       ('MAJOR_VERSION', '1'),
+                       ('MINOR_VERSION', '0'),
+                       ('DEBUG', '0')],
                    include_dirs = includes,
-                   libraries = [BLAS],
+                   libraries = [BLAS, LAPACK],
                    library_dirs = library_dirs,
                    sources = ['pycublas.c'])
 
-# XXX todo cula extension...
+# XXX todo cula extension...for LAPACK
 
 
 setup (name = 'CuNumpy',

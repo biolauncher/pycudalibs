@@ -28,6 +28,7 @@ This file is part of pycudalibs
 #else
 #define _PYCUNUMPY_H 1
 
+
 #if DEBUG > 0
 #include <stdio.h>
 #define trace(format, ...) fprintf(stderr, format, ## __VA_ARGS__)
@@ -35,6 +36,7 @@ This file is part of pycudalibs
 #define trace(format, ...)
 #endif
 
+#include <cula.h>
 #include <cublas.h>
 
 /* lookup of cublas error text */
@@ -74,6 +76,7 @@ static inline char* get_cublas_error_text(cublasStatus sts) {
 /* module based exception */
 static PyObject* cuda_exception;
 
+/* CUDA error handling */
 static inline int cuda_error(int status, char* where) {
   trace("CUDACALL %s: status = %d\n", where, status);
 
@@ -90,6 +93,24 @@ static inline int cublas_error(char* where) {
   return cuda_error(cublasGetError(), where);
 }
 
+/* CULA error handling is more sophisticated than indicated here - TODO take advantage of it!*/
+static inline int cula_error(culaStatus status, char* where) {
+  trace("CULACALL %s: status = %d\n", where, status);
+
+  if (status == culaNoError) {
+    return 0;
+
+  } else {
+    PyErr_SetString(cuda_exception, culaGetStatusString(status));
+    return 1;
+  }
+}
+
+static inline int culablas_error(char* where) {
+  return cula_error(culaGetLastStatus(), where);
+}
+
+/* go numpy */
 #include <structmember.h>
 #include <numpy/arrayobject.h>
 #include <pycumem.h>

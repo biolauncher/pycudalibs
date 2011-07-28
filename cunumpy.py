@@ -31,6 +31,8 @@ complex128 = numpy.complex128
 
 array_types = [float32, float64, complex64, complex128]
 
+# XXX init library/cuda device
+_cublas.init()
 #
 # extend _cunumpy.array - XXX merely a wrapper
 #
