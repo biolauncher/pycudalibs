@@ -30,6 +30,7 @@ This file is part of pycudalibs
 
 #include <pycublas.h>
 #include <pycula.h>
+#include <pylibs.h>
 
 #define CUDA_MEMORY_TYPE_NAME "cuda.memory"
 
@@ -145,7 +146,7 @@ alloc_cuda_Memory(int rows, int cols, int esize) {
 /**
  * embed this in client module init
  */ 
-static inline int 
+inline int 
 init_cuda_MemoryType(void) {
   return PyType_Ready(&cuda_MemoryType);
 }

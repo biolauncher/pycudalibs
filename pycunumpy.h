@@ -28,17 +28,6 @@ This file is part of pycudalibs
 
 #include <Python.h>
 
-/* module exception object */
-extern PyObject* cuda_exception;
-
-/* moudle types */
-extern PyTypeObject* cuda_ArrayType;
- 
-/* cuda array object */
-//#include <pycuarray.h>
-
-/* module importer */
-
 #define CUDA_MODULE_NAME "_cunumpy"
 
 /* type constants */
@@ -49,6 +38,20 @@ extern PyTypeObject* cuda_ArrayType;
 #define CUDA_ERROR_TYPE_SYM_NAME "CUDAERROR"
 
 #define CUDA_MEMORY_TYPE_NAME "cuda.memory"
+
+#ifdef CUNUMPY_MODULE
+
+static PyObject* cuda_exception;
+
+#else
+/* client module importer */
+
+/* module exception object */
+static PyObject* cuda_exception;
+
+/* moudle types */
+static PyTypeObject* cuda_ArrayType;
+ 
 
 static inline int import_cunumpy(void) {
   PyObject* module = PyImport_ImportModule(CUDA_MODULE_NAME);
@@ -62,6 +65,7 @@ static inline int import_cunumpy(void) {
   } 
   return 0;
 }
+#endif
 
 #endif
 

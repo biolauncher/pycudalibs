@@ -85,11 +85,11 @@ cunumpy = Extension('_cunumpy',
                         ('CULA_USE_CUDA_COMPLEX', '1'),
                         ('MAJOR_VERSION', '1'),
                         ('MINOR_VERSION', '0'),
-                        ('DEBUG', '0')],
+                        ('DEBUG', '1')],
                     include_dirs = includes,
                     libraries = [BLAS, LAPACK],
                     library_dirs = library_dirs,
-                    sources = ['pycunumpy.c'])
+                    sources = ['pycunumpy.c', 'pycuarray.c'])
 
 cublas = Extension('_cublas',
                    define_macros = [

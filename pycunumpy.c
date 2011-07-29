@@ -25,46 +25,9 @@ This file is part of pycudalibs
 /*******************
  * module functions
  ******************/
+//#define CUNUMPY_MODULE
+//#include <pycunumpy.h>
+//#include <numpy/arrayobject.h>
+//#include <pycumem.h>
 
-#include <pycunumpy.h>
 
-static PyMethodDef module_methods[] = {
-  {NULL}  /* Sentinel */
-};
-
-/* module exception object */
-PyObject* cuda_exception;
-
-/* module types */
-PyTypeObject* cuda_ArrayType;
- 
-
-#ifndef PyMODINIT_FUNC	/* declarations for DLL import/export */
-#define PyMODINIT_FUNC void
-#endif
-
-PyMODINIT_FUNC
-init_cunumpy(void) {
-    PyObject* module;
-
-    if (PyType_Ready(&cuda_ArrayType) < 0)
-      return;
-
-    if (init_cuda_MemoryType() < 0)
-      return;
-
-    module = Py_InitModule3(CUDA_MODULE_NAME, module_methods, "CUDA numpy style array module.");
-
-    if (module == NULL) return;
-    
-    else {
-      Py_INCREF(&cuda_ArrayType);
-      PyModule_AddObject(module, CUDA_ARRAY_TYPE_SYM_NAME, (PyObject *)&cuda_ArrayType);
-
-      cuda_exception = PyErr_NewException(CUDA_ERROR_TYPE_NAME, NULL, NULL);
-      Py_INCREF(cuda_exception);
-      PyModule_AddObject(module, CUDA_ERROR_TYPE_SYM_NAME, cuda_exception);
-
-      import_array(); // import numpy module
-    }
-}

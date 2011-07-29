@@ -24,9 +24,10 @@ This file is part of pycudalibs
 
 #if defined(_PYLIBS_H)
 #else
-#define _PYLIBS_H 1
+#define _PYLIBS_H
 
 #if DEBUG > 0
+#warning "N.B. tracing code will be compiled in"
 #include <stdio.h>
 #define trace(format, ...) fprintf(stderr, format, ## __VA_ARGS__)
 #else

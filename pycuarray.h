@@ -19,7 +19,7 @@ This file is part of pycudalibs
 
 
 /* 
- * Defines the cuda.array type.
+ * Defines the cuda.array type and module init
  */
 
 #if defined(_PYCUARRAY_H)

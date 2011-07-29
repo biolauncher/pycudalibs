@@ -23,6 +23,7 @@ This file is part of pycudalibs
 
 #include <cublas.h>
 #include <pycunumpy.h>
+#include <pylibs.h>
 
 /* lookup of cublas error text */
 
