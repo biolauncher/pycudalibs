@@ -20,6 +20,7 @@ This file is part of pycudalibs
 /**
  * cuda_Array object implementation
  */
+
 #define CUNUMPY_MODULE
 #include <pycuarray.h>
 
@@ -280,7 +281,7 @@ static PyGetSetDef cuda_Array_properties[] = {
  * object type
  **************/
 
-PyTypeObject cuda_ArrayType = {
+static PyTypeObject cuda_ArrayType = {
     PyObject_HEAD_INIT(NULL)
     0,                                        /*ob_size*/
     CUDA_ARRAY_TYPE_NAME,                     /*tp_name*/
@@ -793,7 +794,7 @@ copy_array(cuda_Array* self) {
   return new;
 }
 
-/* XXX stuck this in here to see if fixes bug */
+/* XXX stuck this in here to see if fixes bug - which it does */
 
 #ifndef PyMODINIT_FUNC	/* declarations for DLL import/export */
 #define PyMODINIT_FUNC void
