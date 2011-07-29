@@ -22,9 +22,7 @@ This file is part of pycudalibs
 #define _PYCULA_H 1
 
 #include <cula.h>
-
-//#include <pycunumpy.h>
-
+#include <pycunumpy.h>
 
 /* CULA error handling is more sophisticated than indicated here - TODO take advantage of it!*/
 static inline int cula_error(culaStatus status, char* where) {

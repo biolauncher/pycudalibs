@@ -26,8 +26,12 @@ This file is part of pycudalibs
 #else
 #define _PYCUMEM_H 1
 
-#define CUDA_MEMORY_TYPE_NAME "cuda.memory"
+/* may use CUDA memory from either of these providers */
 
+#include <pycublas.h>
+#include <pycula.h>
+
+#define CUDA_MEMORY_TYPE_NAME "cuda.memory"
 
 typedef struct {
   PyObject_HEAD
@@ -47,7 +51,7 @@ cuda_Memory_dealloc(cuda_Memory* self) {
   self->ob_type->tp_free((PyObject*)self);
 
   if (self->d_ptr != NULL) 
-    if (cuda_error(culaDeviceFree(self->d_ptr), "dealloc:culaDeviceFree"))
+    if (cula_error(culaDeviceFree(self->d_ptr), "dealloc:culaDeviceFree"))
       return;
 }
 
@@ -130,7 +134,7 @@ alloc_cuda_Memory(int rows, int cols, int esize) {
     self->d_ptr = NULL;
     self->d_pitch = 0;
 
-    if (cuda_error(culaDeviceMalloc((void**) &self->d_ptr, &self->d_pitch, rows, cols, esize),
+    if (cula_error(culaDeviceMalloc((void**) &self->d_ptr, &self->d_pitch, rows, cols, esize),
                    "cuda_Memory:culaDeviceMalloc")) {
       return NULL;
     }

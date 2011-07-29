@@ -5,6 +5,7 @@
 
 #define NO_IMPORT_ARRAY */
 #include <pycula.h>
+#include <pycuarray.h>
 
 /*
  gesvd - generalized singular value decomposition
@@ -57,13 +58,13 @@ static PyObject* gesvd(PyObject* self, PyObject* args) {
       int ldvt - leading dimension of VT
     */
 
-    culaDeviceSgesvd(jobu, jobvt, m, n, 
-                     A->d_mem->d_ptr, lda, U->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
+    //culaDeviceSgesvd(jobu, jobvt, m, n, 
+    //                 A->d_mem->d_ptr, lda, U->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
 
     if (culablas_error("sgemm")) 
       return NULL;
     else 
-      return Py_BuildValue("O", C);
+      return Py_BuildValue("O", A);
   
   } else {
     return NULL;

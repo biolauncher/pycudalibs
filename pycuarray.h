@@ -27,15 +27,17 @@ This file is part of pycudalibs
 #define _PYCUARRAY_H
  
 #include <Python.h>
+
+/* cuda memory */
 #include <pycumem.h>
 
-#define CUDA_ARRAY_TYPE_NAME "cuda.array"
-#define CUDA_ARRAY_TYPE_SYM_NAME "array"
+/* numpy */
+#include <structmember.h>
+#include <numpy/arrayobject.h>
 
-#define CUDA_ERROR_TYPE_NAME "cuda.CUDAERROR"
-#define CUDA_ERROR_TYPE_SYM_NAME "CUDAERROR"
+/* utils */
+#include <pylibs.h>
 
-#define CUDA_MEMORY_TYPE_NAME "cuda.memory"
 
 #define DEVICE_ARRAY_MAXDIMS 2 
 #define DEVICE_ARRAY_MINDIMS 1

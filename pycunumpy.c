@@ -21,16 +21,23 @@ This file is part of pycudalibs
  * numpy integration with cuda device memory, defines module: _cunumpy
  */
 
-#include <pycunumpy.h>
 
 /*******************
  * module functions
  ******************/
 
+#include <pycunumpy.h>
+
 static PyMethodDef module_methods[] = {
-  // 
   {NULL}  /* Sentinel */
 };
+
+/* module exception object */
+PyObject* cuda_exception;
+
+/* module types */
+PyTypeObject* cuda_ArrayType;
+ 
 
 #ifndef PyMODINIT_FUNC	/* declarations for DLL import/export */
 #define PyMODINIT_FUNC void

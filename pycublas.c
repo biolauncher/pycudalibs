@@ -23,7 +23,10 @@ This file is part of pycudalibs
  *  defines module: _cublas 
  */
 #define NO_IMPORT_ARRAY
+
 #include <pycublas.h>
+#include <pycula.h>
+#include <pycuarray.h>
 
 #ifdef CULA
 

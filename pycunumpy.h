@@ -28,31 +28,30 @@ This file is part of pycudalibs
 
 #include <Python.h>
 
-/* numpy */
-#include <structmember.h>
-#include <numpy/arrayobject.h>
+/* module exception object */
+extern PyObject* cuda_exception;
 
-/* utils */
-#include <pylibs.h>
-
+/* moudle types */
+extern PyTypeObject* cuda_ArrayType;
+ 
 /* cuda array object */
-#include <pycuarray.h>
+//#include <pycuarray.h>
 
-/* module based exception */
-static PyObject* cuda_exception;
-
-
-/* defines for various constants */
+/* module importer */
 
 #define CUDA_MODULE_NAME "_cunumpy"
 
+/* type constants */
+#define CUDA_ARRAY_TYPE_NAME "cuda.array"
+#define CUDA_ARRAY_TYPE_SYM_NAME "array"
 
-/* client code only */
+#define CUDA_ERROR_TYPE_NAME "cuda.CUDAERROR"
+#define CUDA_ERROR_TYPE_SYM_NAME "CUDAERROR"
 
-static PyTypeObject *cuda_ArrayType;
- 
+#define CUDA_MEMORY_TYPE_NAME "cuda.memory"
+
 static inline int import_cunumpy(void) {
-  PyObject *module = PyImport_ImportModule(CUDA_MODULE_NAME);
+  PyObject* module = PyImport_ImportModule(CUDA_MODULE_NAME);
   
   if (module != NULL) {
     cuda_ArrayType = (PyTypeObject *)PyObject_GetAttrString(module, CUDA_ARRAY_TYPE_SYM_NAME);
@@ -63,8 +62,6 @@ static inline int import_cunumpy(void) {
   } 
   return 0;
 }
-
-#endif /* client code */
 
 #endif
 
