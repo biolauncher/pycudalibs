@@ -18,10 +18,8 @@ This file is part of pycudalibs
 */
 
 /* 
- * a python object which provides a simple encapsulation of CUDA device
- * memory that can be shared. 
- *
- * Currently a C only api that can be included in other modules
+ * A python object which provides a reference counted encapsulation of raw CUDA device
+ * memory that can thus be shared. 
  */
 
 #if defined(_PYCUMEM_H)

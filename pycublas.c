@@ -93,8 +93,8 @@ static PyObject* sgemm(PyObject* self, PyObject* args) {
                    const float *B, int ldb, float beta, 
                    float *C, int ldc)
     */
-    culaSgemm(transa, transb, m, n, k, alpha, 
-              A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
+    culaDeviceSgemm(transa, transb, m, n, k, alpha, 
+                    A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
 
     if (culablas_error("sgemm")) 
       return NULL;
@@ -149,7 +149,7 @@ static PyObject* dgemm(PyObject* self, PyObject* args) {
                    const double *B, int ldb, double beta, 
                    double *C, int ldc)
     */
-    culaDgemm(transa, transb, m, n, k, alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
+    culaDeviceDgemm(transa, transb, m, n, k, alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
 
     if (culablas_error("dgemm")) 
       return NULL;
@@ -184,13 +184,14 @@ static PyObject* cgemm(PyObject* self, PyObject* args) {
        this routine we use 0 and 1 as alpha and beta parameters but
        this comment is the only warning */
 
-    culaFloatComplex c_alpha;
-    culaFloatComplex c_beta;
+    culaDeviceFloatComplex c_alpha;
+    culaDeviceFloatComplex c_beta;
 
     c_alpha.x = (float) alpha.real;
     c_alpha.y = (float) alpha.imag;
-    c_beta.x = (float) alpha.real;
-    c_beta.y = (float) alpha.imag;
+
+    c_beta.x = (float) beta.real;
+    c_beta.y = (float) beta.imag;
 
     // new setup for index twiddling transpose
     int m = transa == 't' ? A->a_dims[1] : A->a_dims[0];
@@ -217,8 +218,8 @@ static PyObject* cgemm(PyObject* self, PyObject* args) {
                    int lda, const cuComplex *B, int ldb, 
                    cuComplex beta, cuComplex *C, int ldc) 
     */
-    culaCgemm(transa, transb, m, n, k, c_alpha, 
-              A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, c_beta, C->d_mem->d_ptr, ldc);
+    culaDeviceCgemm(transa, transb, m, n, k, c_alpha, 
+                    A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, c_beta, C->d_mem->d_ptr, ldc);
 
     if (culablas_error("cgemm")) 
       return NULL;
@@ -253,8 +254,9 @@ static PyObject* zgemm(PyObject* self, PyObject* args) {
 
     c_alpha.x = alpha.real;
     c_alpha.y = alpha.imag;
-    c_beta.x = alpha.real;
-    c_beta.y = alpha.imag;
+
+    c_beta.x = beta.real;
+    c_beta.y = beta.imag;
 
     // new setup for index twiddling transpose
     int m = transa == 't' ? A->a_dims[1] : A->a_dims[0];
@@ -281,7 +283,7 @@ static PyObject* zgemm(PyObject* self, PyObject* args) {
                    int lda, const cuDoubleComplex *B, int ldb, 
                    cuDoubleComplex beta, cuDoubleComplex *C, int ldc) 
     */
-    culaZgemm(transa, transb, m, n, k, c_alpha, 
+    culaDeviceZgemm(transa, transb, m, n, k, c_alpha, 
               A->d_mem->d_ptr, lda, B->d_mem->d_ptr, ldb, c_beta, C->d_mem->d_ptr, ldc);
 
     if (culablas_error("zgemm")) 
@@ -334,7 +336,7 @@ static PyObject* sgemv(PyObject* self, PyObject* args) {
                   const float *A, int lda, const float *x,  
                   int incx, float beta, float *y, int incy)
     */
-    culaSgemv(transa, m, n, alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, 1, beta, C->d_mem->d_ptr, 1);
+    culaDeviceSgemv(transa, m, n, alpha, A->d_mem->d_ptr, lda, B->d_mem->d_ptr, 1, beta, C->d_mem->d_ptr, 1);
     
     if (culablas_error("sgemv")) 
       return NULL;

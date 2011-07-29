@@ -82,6 +82,7 @@ cunumpy = Extension('_cunumpy',
                     define_macros = [
                         #('CUBLAS', '1'),
                         #('CULA', '1'),
+                        ('CULA_USE_CUDA_COMPLEX', '1'),
                         ('MAJOR_VERSION', '1'),
                         ('MINOR_VERSION', '0'),
                         ('DEBUG', '0')],
@@ -94,6 +95,7 @@ cublas = Extension('_cublas',
                    define_macros = [
                        ('CUBLAS', '1'),
                        ('CULA', '1'),
+                       ('CULA_USE_CUDA_COMPLEX', '1'),
                        ('MAJOR_VERSION', '1'),
                        ('MINOR_VERSION', '0'),
                        ('DEBUG', '0')],
@@ -102,16 +104,27 @@ cublas = Extension('_cublas',
                    library_dirs = library_dirs,
                    sources = ['pycublas.c'])
 
-# XXX todo cula extension...for LAPACK
+culax = Extension('_cula',
+                  define_macros = [
+                      ('CUBLAS', '1'),
+                      ('CULA', '1'),
+                      ('CULA_USE_CUDA_COMPLEX', '1'),
+                      ('MAJOR_VERSION', '1'),
+                      ('MINOR_VERSION', '0'),
+                      ('DEBUG', '0')],
+                  include_dirs = includes,
+                  libraries = [BLAS, LAPACK],
+                  library_dirs = library_dirs,
+                  sources = ['pycula.c'])
 
 
-setup (name = 'CuNumpy',
-       version = '0.2',
+setup (name = 'cunumpy',
+       version = '1.0',
        description = 'CUDA BLAS and CULA LAPACK integration with numpy arrays',
        author = 'Simon E. Beaumont',
        author_email = 'ix@modelsciences.com',
        url = 'http://www.modelsciences.com',
-       long_description = '''APIs for CUDA and CULA libraries with support for numpy arrays. see README.''',
-       ext_modules = [cunumpy, cublas],
+       long_description = 'APIs for CUDA and CULA libraries with support for numpy arrays. see README.',
+       ext_modules = [cunumpy, cublas, culax],
        py_modules = ['cunumpy'],
        requires=['numpy(>=1.2)'])
