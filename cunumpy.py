@@ -17,8 +17,7 @@
 #    License along with pycudalibs.  If not, see <http://www.gnu.org/licenses/>.  
 
 
-import _cunumpy
-import _cublas
+import gpu
 import numpy
 
 #
@@ -31,41 +30,27 @@ complex128 = numpy.complex128
 
 array_types = [float32, float64, complex64, complex128]
 
-# TODO: library object that takes care of init and CUDA device association etc.
-# XXX init library/cuda device
-_cublas.init()
-
-
-#
-# extend _cunumpy.array - XXX merely a wrapper
-#
-class CUDAarray(_cunumpy.array):
-    """
-    Encapsulates CUDA device based arrays numpy style.
-    """
-    pass
 
 #
 # functions to provide numpy like factory methods for cunumpy.array objects
 #
-
 def array(*args, **keyw):
-    return CUDAarray(numpy.array(*args, **keyw), **keyw)
+    return gpu.CUDAarray(numpy.array(*args, **keyw), **keyw)
 
 def arange(*args, **keyw):
-    return CUDAarray(numpy.arange(*args, **keyw), **keyw)
+    return gpu.CUDAarray(numpy.arange(*args, **keyw), **keyw)
 
 def eye(*args, **keyw):
-    return CUDAarray(numpy.eye(*args, **keyw), **keyw)
+    return gpu.CUDAarray(numpy.eye(*args, **keyw), **keyw)
 
 def zeros(*args, **keyw):
-    return CUDAarray(numpy.zeros(*args, **keyw), **keyw)
+    return gpu.CUDAarray(numpy.zeros(*args, **keyw), **keyw)
 
 def ones(*args, **keyw):
-    return CUDAarray(numpy.ones(*args, **keyw), **keyw)
+    return gpu.CUDAarray(numpy.ones(*args, **keyw), **keyw)
 
 def identity(*args, **keyw):
-    return CUDAarray(numpy.identity(*args, **keyw), **keyw)
+    return gpu.CUDAarray(numpy.identity(*args, **keyw), **keyw)
 
 
 

@@ -19,7 +19,7 @@ This file is part of pycudalibs
 
  
 /**
- * Python integration to CULA/CUDA BLAS routines.
+ * Python integration to CULA/CUDA BLAS and framework routines.
  *  defines module: _cublas 
  */
 #define NO_IMPORT_ARRAY
@@ -31,8 +31,38 @@ This file is part of pycudalibs
 #ifdef CULA
 
 /** 
- * Low level CULA BLAS library api.
+ * Low level CULA BLAS library api. Including common framework functions.
  */
+
+/**
+ * get number of CUDA devices
+ */
+static PyObject* getDeviceCount(PyObject* self, PyObject* args) {
+  int n_dev;
+
+  if (!PyArg_ParseTuple(args, "")) 
+    return NULL;
+  else if (cula_error(culaGetDeviceCount(&n_dev), "culaGetDeviceCount"))
+    return NULL;
+  else 
+    return Py_BuildValue("i", n_dev);
+}
+
+/**
+ * select a cuda device to bind to this thread - must be called
+ * before init.
+ */
+static PyObject* selectDevice(PyObject* self, PyObject* args) {
+  int devno;
+
+  if (!PyArg_ParseTuple(args, "i", &devno)) 
+    return NULL;
+  else if (cula_error(culaSelectDevice(devno), "culaSelectDevice"))
+    return NULL;
+  else 
+    return Py_BuildValue("");
+
+}
 
 static PyObject* init(PyObject* self, PyObject* args) {
   if (!PyArg_ParseTuple(args, "")) 
@@ -532,6 +562,13 @@ static PyObject* cdotc(PyObject* self, PyObject* args) {
  ************************/
 
 static PyMethodDef _cublas_methods[] = {
+
+  {"device_count", getDeviceCount, METH_VARARGS,
+   "Get the number of CUDA capable devices."},
+
+  {"select_device", selectDevice, METH_VARARGS,
+   "Select the CUDA device to attach to the host thread."},
+
   {"init", init, METH_VARARGS, 
    "Initialise CUBLAS library by attaching to CUDA device that is bound to the calling host thread."},
 
@@ -560,7 +597,7 @@ static PyMethodDef _cublas_methods[] = {
 #endif 
 
   {"close", shutdown, METH_VARARGS,
-   "Releases CPU‐side resources used by the CUBLAS library."},
+   "Shutdown the CUBLAS library."},
   {NULL, NULL, 0, NULL}
 };
 

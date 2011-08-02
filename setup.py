@@ -126,5 +126,5 @@ setup (name = 'cunumpy',
        url = 'http://www.modelsciences.com',
        long_description = 'APIs for CUDA and CULA libraries with support for numpy arrays. see README.',
        ext_modules = [cunumpy, cublas, culax],
-       py_modules = ['cunumpy'],
+       py_modules = ['gpu', 'cunumpy'],
        requires=['numpy(>=1.2)'])

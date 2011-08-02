@@ -1,5 +1,9 @@
 # module of support routines for testing
 import numpy as np
+import gpu
+
+# initialize default CUDA device
+gpu.CUDAdevice()
 
 # we will be testing linear algebra on CUDA we we need an approximation
 def arrays_equal(a, b, epsilon=0.000001):
