@@ -10,7 +10,7 @@
 
 /*
  gesvd - generalized singular value decomposition
-
+ A = U.S.VT
 */
 
 static PyObject* gesvd(PyObject* self, PyObject* args) {
@@ -24,9 +24,11 @@ static PyObject* gesvd(PyObject* self, PyObject* args) {
                        cuda_ArrayType, &U,
                        cuda_ArrayType, &VT)) {
 
+    // what if A is transposed? then is lda affected? need to check this
+    // and also I may need to tweak the memory pitch in the transpose code
+
     int m = A->a_dims[0];
     int n = A->a_dims[1];
-
 
     // leading dimensions 
     int lda = A->a_dims[0];
@@ -45,27 +47,30 @@ static PyObject* gesvd(PyObject* self, PyObject* args) {
                    'N' no columns of U (left singular vectors) are computed.
       char jobvt - 'A' all N rows of VT are returned in VT,
                    'S' the first min(m,n) rows of VT are returned in VT,
-                   'O' the first min(m,n) rows of Vt are overwritten in A,
+                   'O' the first min(m,n) rows of VT are overwritten in A,
                    'N' no rows of VT (right singular vectors) are computed.
       int m - number of rows in A
       int n - number of columns in A
 
       A - m*n matrix to factorize into U S VT
-      int lda - leading dimentsion of A
+      int lda - leading dimension of A (>= max(1,m))
       S - singular values
       U - left singular vectors
-      int ldu - leading dimension of U
+      int ldu - leading dimension of U 
       VT - right singular vectors
       int ldvt - leading dimension of VT
     */
 
     //culaDeviceSgesvd(jobu, jobvt, m, n, 
-    //                 A->d_mem->d_ptr, lda, U->d_mem->d_ptr, ldb, beta, C->d_mem->d_ptr, ldc);
+    //                 A->d_mem->d_ptr, lda, S->d_mem->d_ptr,
+    //                 U->d_mem->d_ptr, ldu,
+    //                 VT->d_mem->d_ptr, ldvt);
 
-    if (culablas_error("sgemm")) 
+    if (culablas_error("sgesvd")) 
       return NULL;
     else 
-      return Py_BuildValue("O", A);
+      // build a tuple of arrays
+      return Py_BuildValue("OOO", S, U, VT);
   
   } else {
     return NULL;

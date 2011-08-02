@@ -149,21 +149,23 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
 static inline PyObject *
 _stringify(cuda_Array *self) {
   if (self->a_ndims == 2)
-    return PyString_FromFormat("<%s %p %s%d matrix(%d,%d) @%p>",
+    return PyString_FromFormat("<%s %p %s%d matrix(%d,%d) %d @%p>",
                                self->ob_type->tp_name,
                                self->d_mem->d_ptr,
                                PyTypeNum_ISCOMPLEX(self->a_dtype->type_num) ? "complex" : "float",
                                self->e_size * 8,
                                self->a_dims[0],
                                self->a_dims[1],
+                               self->d_mem->d_pitch,
                                self);
   else
-    return PyString_FromFormat("<%s %p %s%d vector(%d) @%p>",
+    return PyString_FromFormat("<%s %p %s%d vector(%d) %d @%p>",
                                self->ob_type->tp_name,
                                self->d_mem->d_ptr,
                                PyTypeNum_ISCOMPLEX(self->a_dtype->type_num) ? "complex" : "float",
                                self->e_size * 8,
                                self->a_dims[0],
+                               self->d_mem->d_pitch,
                                self);
 }
 

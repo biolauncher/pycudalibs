@@ -1,7 +1,13 @@
-1. Create appropriate headers for low level CULA/LAPACK interfaces (copy BLAS examples)
-2. rename all BLAS functions
-3. rebuild and test agianst CULA libs
-4. introduce LAPACK functions - by need (single prec, complex and real) svd, eigen problems etc.
-5. test cases for 4.
-6. rebuild and test.
-7. go figure...
+1. check we are using CULA devdev interface partout
+2. best pitch for transposed arrays
+3. LDA implications for LAPACK and transposed arrays - does LAPACK assume fortran layout?
+4. implement SVD
+5. pycunumpy wrapper
+6. test cases for LAPACK
+	test_lapack
+	test_svd
+	test_eigensystem
+	...
+
+7. long running allocation/deallocation tests for leaks
+8. kernels in c for matrix (as column vectors) normalizer and centralizer
