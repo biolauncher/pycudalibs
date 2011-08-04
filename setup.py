@@ -80,8 +80,8 @@ LAPACK = 'cula'
 
 cunumpy = Extension('_cunumpy',
                     define_macros = [
-                        #('CUBLAS', '1'),
-                        #('CULA', '1'),
+                        ('CUBLAS', '1'),
+                        ('CULA', '1'),
                         ('CULA_USE_CUDA_COMPLEX', '1'),
                         ('MAJOR_VERSION', '1'),
                         ('MINOR_VERSION', '0'),

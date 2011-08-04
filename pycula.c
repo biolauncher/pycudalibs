@@ -24,9 +24,7 @@ static PyObject* gesvd(PyObject* self, PyObject* args) {
                        cuda_ArrayType, &U,
                        cuda_ArrayType, &VT)) {
 
-    // what if A is transposed? then is lda affected? need to check this
-    // and also I may need to tweak the memory pitch in the transpose code
-
+    // XXX any transpose issues?
     int m = A->a_dims[0];
     int n = A->a_dims[1];
 
@@ -61,10 +59,10 @@ static PyObject* gesvd(PyObject* self, PyObject* args) {
       int ldvt - leading dimension of VT
     */
 
-    //culaDeviceSgesvd(jobu, jobvt, m, n, 
-    //                 A->d_mem->d_ptr, lda, S->d_mem->d_ptr,
-    //                 U->d_mem->d_ptr, ldu,
-    //                 VT->d_mem->d_ptr, ldvt);
+    culaDeviceSgesvd(jobu, jobvt, m, n, 
+                     A->d_mem->d_ptr, lda, S->d_mem->d_ptr,
+                     U->d_mem->d_ptr, ldu,
+                     VT->d_mem->d_ptr, ldvt);
 
     if (culablas_error("sgesvd")) 
       return NULL;
@@ -77,3 +75,24 @@ static PyObject* gesvd(PyObject* self, PyObject* args) {
   }
 }
 
+/************************
+ * module function table
+ ************************/
+
+static PyMethodDef _cula_methods[] = {
+
+  {"gesvd", gesvd, METH_VARARGS,
+   "Singular value decomposition of a single precision real matrix A (A = U S VT)"},
+
+  {NULL, NULL, 0, NULL}
+};
+
+
+/* initialise the Python c extension module - this function has to be named consistently */
+
+PyMODINIT_FUNC init_cula(void) {
+  // initialise the module
+  PyObject* module = Py_InitModule("_cula", _cula_methods);
+  if (module == NULL) return;
+  import_cunumpy();
+}

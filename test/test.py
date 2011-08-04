@@ -6,8 +6,8 @@ import gpu
 gpu.CUDAdevice()
 
 # we will be testing linear algebra on CUDA we we need an approximation
-def arrays_equal(a, b, epsilon=0.000001):
-    return np.allclose(a,b)
+def arrays_equal(a, b, epsilon=1e-05):
+    return np.allclose(a,b, epsilon)
     #return (abs(a-b) < epsilon).all()
 
 def close(a, b, rtol=1e-05, atol=1e-08):

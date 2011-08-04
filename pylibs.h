@@ -26,6 +26,9 @@ This file is part of pycudalibs
 #else
 #define _PYLIBS_H
 
+#define max(a,b) (a)>(b)?(a):(b)
+#define min(a,b) (a)<(b)?(a):(b)
+
 #if DEBUG > 0
 #warning "N.B. tracing code will be compiled in"
 #include <stdio.h>

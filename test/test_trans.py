@@ -17,16 +17,16 @@ class TestTranspose(unittest.TestCase):
         self.complex_mata = [self.complex_veca for i in range(1,5)]
         self.complex_matb = [self.complex_vecb for i in range(1,11)]
 
-    def test_vector_transpose_identity(self):
+    def test_vector_transpose_idempotency(self):
         # transpose is a noop for vectors - they are always columns
         v = cn.array(self.real_veca, dtype=cn.float32)
         self.assert_(test.arrays_equal(v.T.toarray(), v.toarray()))
 
-    def test_matrix_transpose_identity(self):
+    def test_matrix_transpose_idempotency(self):
         a = cn.array(self.real_mata, dtype=cn.float32)
         self.assert_(test.arrays_equal(a.toarray(), a.T.T.toarray()))
 
-    def test_linalg_transpose_identity(self):
+    def test_linalg_transpose_idempotency(self):
         a = cn.array(self.real_mata, dtype=cn.float32)
         b = cn.array(self.real_matb, dtype=cn.float32)
         c = a.dot(b)
@@ -36,9 +36,9 @@ class TestTranspose(unittest.TestCase):
 
 def suite_single():
     suite = unittest.TestSuite()
-    tests = ['test_vector_transpose_identity',
-             'test_matrix_transpose_identity',
-             'test_linalg_transpose_identity'
+    tests = ['test_vector_transpose_idempotency',
+             'test_matrix_transpose_idempotency',
+             'test_linalg_transpose_idempotency'
              ]
 
     return unittest.TestSuite(map(TestTranspose, tests))

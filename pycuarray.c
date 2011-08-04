@@ -259,14 +259,17 @@ static PyMethodDef cuda_Array_methods[] = {
   {"reshape", (PyCFunction) cuda_Array_reshape, METH_VARARGS,
    "Reshape the dimensions of a CUDA device array."},
 
+#ifdef CULA
+  {"svd", (PyCFunction) cuda_Array_svd, METH_VARARGS,
+   "Singular value decomposion of CUDA array - returns tuple of (U S VT) device arrays."},
+#endif
+
   {NULL, NULL, 0, NULL} 
 };
 
 /**********************
  * getters and setters
  *********************/
-
-//TODO for CULA integration experiment: here's where we can expose the underyling device memory
 
 static PyGetSetDef cuda_Array_properties[] = {
   {"shape", (getter) cuda_Array_getShape, (setter) NULL, 
@@ -331,6 +334,7 @@ static PyTypeObject cuda_ArrayType = {
 static PyObject*
 cuda_Array_transpose(cuda_Array *self, PyObject *args) {
   // toggle the transpose flag for matrices only since we keep vectors in column form
+  // XXX this may lose on pitch optimization
   if (!isvector(self)) {
 
     cuda_Array *clone = (cuda_Array *) _PyObject_New(&cuda_ArrayType);
@@ -663,7 +667,7 @@ cuda_Array_reshape(cuda_Array *self, PyObject *args) {
 
 /**
  * sum of an array - the only way to do this in blas is with dot and a vector of ones!
- * -- no way I'm doing that b/s - this now under review
+ * -- no way I'm doing that b/s - this now under review - maybe LAPACK can help!
    
 static PyObject*
 cuda_Array_sum(cuda_Array *self) {
@@ -694,6 +698,56 @@ cuda_Array_copy(cuda_Array *self) {
   cuda_Array *copy = copy_array(self);
   return (copy == NULL) ? NULL : Py_BuildValue("O", copy);
 }
+
+/*************************
+ * LAPACK - CULA methods 
+ *************************/
+#ifdef CULA
+
+static PyObject*
+cuda_Array_svd(cuda_Array* self) {
+
+  // dimensions
+  int m = self->a_dims[0];
+  int n = self->a_dims[1];
+  int lda = max(1,m);
+  int ldu = m;
+  int ldvt = min(m,n);
+
+  // allocate device arrays to recieve svd results
+  cuda_Array *U = make_matrix(m, min(m,n), self->a_dtype);
+  if (U == NULL) return NULL;
+  // S is always real
+  cuda_Array *S = make_vector(min(m,n), dtype(isdouble(self) ? NPY_FLOAT64 : NPY_FLOAT32));
+  if (S == NULL) return NULL;
+  cuda_Array *VT = make_matrix(min(m,n), min(m,n), self->a_dtype);
+  if (VT == NULL) return NULL;
+
+  /* LAPACK dispatch based on array type */
+  void (*LAPACK_fn)();
+ 
+  if (iscomplex(self))
+    LAPACK_fn = isdouble(self) ? (void (*)()) culaDeviceZgesvd : (void (*)()) culaDeviceCgesvd;
+  else
+    LAPACK_fn = isdouble(self) ? (void (*)()) culaDeviceDgesvd : (void (*)()) culaDeviceSgesvd;
+  
+
+  /* N.B. array 'self' contents are always destroyed by LAPACK! */
+  // TODO: my functional instincts say we should copy self!
+
+  (*LAPACK_fn)('S', 'S', self->a_dims[0], self->a_dims[1], 
+               self->d_mem->d_ptr, lda,
+               S->d_mem->d_ptr,
+               U->d_mem->d_ptr, ldu,
+               VT->d_mem->d_ptr, ldvt);
+  
+  if (culablas_error("device_gesvd"))
+    return NULL;
+  else 
+    return Py_BuildValue("OOO", U, S, VT);
+}
+
+#endif
 
 
 /***************************************************************************
@@ -746,7 +800,7 @@ make_matrix(int m, int n, PyArray_Descr *dtype) {
       return NULL;
     }
 
-    self->a_dtype =  dtype;
+    self->a_dtype = dtype;
     Py_INCREF(self->a_dtype);
   }
   return self;
@@ -796,7 +850,23 @@ copy_array(cuda_Array* self) {
   return new;
 }
 
-/* XXX stuck this in here to see if fixes bug - which it does */
+/*******************
+ * Type descriptors
+ *******************/
+
+static inline PyArray_Descr* 
+dtype(int typenum) {
+  PyArray_Descr* dtype = PyArray_DescrNewFromType(typenum);
+  //Py_INCREF(dtype);
+  return dtype;
+}
+
+
+/*********************
+ * Module definitions 
+ *********************/
+
+// XXX stuck this in here to see if fixes bug - which it does but why?
 
 #ifndef PyMODINIT_FUNC	/* declarations for DLL import/export */
 #define PyMODINIT_FUNC void
