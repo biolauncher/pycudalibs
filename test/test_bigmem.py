@@ -3,6 +3,7 @@ import cunumpy as cn
 import numpy as np
 import math
 from _cunumpy import CUDAERROR
+import test
 
 # we will be testing linear algebra on CUDA so we need an approximation YMMV
 def arrays_equal(a, b, epsilon=0.000001):
