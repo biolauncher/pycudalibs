@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2009 Model Sciences Ltd.
+Copyright (C) 2009-2011 Model Sciences Ltd.
 
 This file is part of pycudalibs
 
@@ -15,25 +15,34 @@ This file is part of pycudalibs
 
     You should have received a copy of the Lesser GNU General Public
     License along with pycudalibs.  If not, see <http://www.gnu.org/licenses/>.  
+
+Author
+    Simon Beaumont
 */
 
 /**
- * cuda_Array object implementation
+ * cuda_Array Python object implementation
  */
 
 #define CUNUMPY_MODULE
 #include <pycuarray.h>
 
+/**
+ * cuda_Array destructor
+ */
 static void
 cuda_Array_dealloc(cuda_Array* self) {
 
-  trace("TRACE cuda_Array_dealloc: %0x (%0x)\n", (int) self, (int) (self->d_mem != NULL ? self->d_mem->d_ptr : 0));
+  trace("TRACE cuda_Array_dealloc: %0x (%0x)\n", 
+        (int) self, (int) (self->d_mem != NULL ? self->d_mem->d_ptr : 0));
   Py_XDECREF(self->a_dtype);
   Py_XDECREF(self->d_mem);
   self->ob_type->tp_free((PyObject*)self);
 }
 
-
+/**
+ * cuda_Array __new__(cls, ...)
+ */
 static PyObject *
 cuda_Array_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
   cuda_Array *self;
@@ -55,12 +64,10 @@ cuda_Array_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
 
 /**
- * numpy array to cuda device memory constructor: 
- *  takes a numpy array
- *  an optional dtype in numpy format
- *  returns a cuda DeviceMemory copy of the array suitable for cublas
+ * cuda_Array __init__(self, numpy_initializer, dtype=None)
+ *  takes a numpy array or numpy style initializer
+ *  and optional dtype in numpy format
  */
-
 static int
 cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
   
@@ -74,11 +81,9 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
   if (self->a_dtype != NULL) { Py_DECREF(self->a_dtype); }
 
   //if (PyArg_ParseTuple(args, "O|O&", &object, PyArray_DescrConverter, &dtype)) {
-  if (PyArg_ParseTupleAndKeywords(args, kwds, "O|O&", kwlist, &object, PyArray_DescrConverter, &dtype)) {
+  if (PyArg_ParseTupleAndKeywords(args, kwds, "O|O&", kwlist, &object, 
+                                  PyArray_DescrConverter, &dtype)) {
 
-    // default to dtype of the source 
-    //if (dtype == NULL) dtype = PyArray_DESCR(object); 
-    
     // check dtype is valid
     if (dtype == NULL || !PyArray_DescrCheck(dtype))
       dtype = PyArray_DescrFromType(NPY_FLOAT32);
@@ -197,6 +202,14 @@ cuda_Array_getTranspose(cuda_Array *self, void *closure) {
   return cuda_Array_transpose(self, NULL);
 }
 
+#ifdef CULA
+
+static PyObject*
+cuda_Array_getConjugateTranspose(cuda_Array *self, void *closure) {
+  return cuda_Array_conjugateTranspose(self);
+}
+
+#endif //CULA
 
 /* create a numpy host array from cuda device array */
 
@@ -262,6 +275,10 @@ static PyMethodDef cuda_Array_methods[] = {
 #ifdef CULA
   {"svd", (PyCFunction) cuda_Array_svd, METH_VARARGS,
    "Singular value decomposion of CUDA array - returns tuple of (U S VT) device arrays."},
+  {"eigensystem", (PyCFunction) cuda_Array_eigensystem, METH_VARARGS | METH_KEYWORDS,
+   "Compute eigenvalues and optionally left and/or right eigenvectors of a square matrix."},
+  {"adjoint", (PyCFunction) cuda_Array_conjugateTranspose, METH_VARARGS,
+   "Conjugate transpose of a matrix"},
 #endif
 
   {NULL, NULL, 0, NULL} 
@@ -278,6 +295,10 @@ static PyGetSetDef cuda_Array_properties[] = {
    "dtype of device array", NULL},
   {"T", (getter) cuda_Array_getTranspose, (setter) NULL, 
    "transpose of array", NULL},
+#ifdef CULA
+  {"H", (getter) cuda_Array_getConjugateTranspose, (setter) NULL,
+   "conjugate transpose of array", NULL},
+#endif // CULA
   {NULL}
 };
 
@@ -356,6 +377,7 @@ cuda_Array_transpose(cuda_Array *self, PyObject *args) {
   
   } else return Py_BuildValue("O", self); // noop for vectors as they are always column vecs 
 }
+
 
 
 /**
@@ -628,15 +650,7 @@ cuda_Array_reshape(cuda_Array *self, PyObject *args) {
   int dim0 = 0, dim1 = 0;
 
   if (PyArg_ParseTuple(args, "(ii)", &dim0, &dim1)) {
-    /* 
-       if (PyArg_ParseTuple(args, "O!", PyTupleObject, &tuple)) {
-       // 
-       Py_ssize_t len = (int) PyTuple_GET_SIZE(tuple);
-       if (len > 2) {
-       PyErr_SetString(PyExc_ValueError, "maximum number of dimensions is two")
-       return NULL;
-       } 
-    */
+  
     int ndims = dim1 == 0 ? 1 : 2;
     if (ndims == 1) dim1 = 1; // column vector convention
 
@@ -747,6 +761,132 @@ cuda_Array_svd(cuda_Array* self) {
     return Py_BuildValue("OOO", U, S, VT);
 }
 
+
+/** 
+ *  eigensystem  - values, and/or left right vectors 
+ */
+static PyObject*
+cuda_Array_eigensystem(cuda_Array* self, PyObject* args, PyObject* keywds) {
+
+  /* default to values only */
+  int leftv = 0;
+  int rightv = 0;
+  static char* kwlist[] = {"left_vectors", "right_vectors", NULL};
+
+  /* check matrix is square */
+  if (self->a_dims[0] != self->a_dims[1]) {
+    PyErr_SetString(PyExc_ValueError, "matrix must be square for eigensolver");
+    return NULL;
+  }
+  
+  /* parse Python aguments */
+  if (PyArg_ParseTupleAndKeywords(args, keywds, "|ii", kwlist, &leftv, &rightv)) {
+    /* GEEV params */
+    char jobvl = leftv ? 'V' : 'N';
+    char jobvr = rightv ? 'V' : 'N';
+    int n = self->a_dims[0];
+    int lda = max(1,n);
+
+    /*
+      NOTA - left and right eigenvectors:
+
+      For real variants (S/D): If the j-th eigenvalue is real, then
+      u(j) = VL(:,j), the j-th column of VL. If the j-th and (j+1)-st
+      eigenvalues form a complex conjugate pair, then u(j) = VL(:,j) +
+      i*VL(:,j+1) and u(j+1) = VL(:,j) - i*VL(:,j+1).
+      
+      For complex variants (C/Z): u(j) = VL(:,j), the j-th column of VL.
+    */
+
+    /* left eigenvectors */
+    int ldvl = leftv ? n : 1;
+    cuda_Array* vl = make_matrix(ldvl, n, self->a_dtype);
+    if (leftv && vl == NULL) return NULL;
+
+    /* right eigenvectors */
+    int ldvr = rightv ? n : 1;
+    cuda_Array* vr = make_matrix(ldvr, n, self->a_dtype);
+    if (rightv && vr == NULL) return NULL;
+
+    /* LAPACK dispatch based on array type */
+    void (*LAPACK_fn)();
+ 
+    if (iscomplex(self)) {
+
+      cuda_Array* w = make_vector(n, self->a_dtype);
+      if (w == NULL) return NULL;
+
+      LAPACK_fn = isdouble(self) ? (void (*)()) culaDeviceZgeev : (void (*)()) culaDeviceCgeev;
+      (*LAPACK_fn)(jobvl, jobvr, n, 
+                   self->d_mem->d_ptr, lda, 
+                   w->d_mem->d_ptr, 
+                   vl->d_mem->d_ptr, ldvl, 
+                   vr->d_mem->d_ptr, ldvr);
+
+      if (culablas_error("deviceC|Zgesvd"))
+        return NULL;
+      else if (leftv && rightv)
+        return Py_BuildValue("OOO", vl, w, vr);
+      else if (leftv)
+        return Py_BuildValue("OO", vl, w);
+      else if (rightv)
+        return Py_BuildValue("OO", w, vr);
+      else 
+        return Py_BuildValue("O", w);
+
+    } else {
+
+      cuda_Array* wr = make_vector(n, self->a_dtype);
+      if (wr == NULL) return NULL;
+      cuda_Array* wi = make_vector(n, self->a_dtype);
+      if (wi == NULL) return NULL;
+
+      LAPACK_fn = isdouble(self) ? (void (*)()) culaDeviceDgeev : (void (*)()) culaDeviceSgeev;
+      (*LAPACK_fn)(jobvl, jobvr, n, 
+                   self->d_mem->d_ptr, lda, 
+                   wr->d_mem->d_ptr, wi->d_mem->d_ptr, 
+                   vl->d_mem->d_ptr, ldvl, 
+                   vr->d_mem->d_ptr, ldvr);
+
+      if (culablas_error("deviceS|Dgesvd"))
+        return NULL;
+      else if (leftv && rightv)
+        return Py_BuildValue("OOOO", vl, wr, wi, vr);
+      else if (leftv)
+        return Py_BuildValue("OOO", vl, wr, wi);
+      else if (rightv)
+        return Py_BuildValue("OOO", wr, wi, vr);
+      else 
+        return Py_BuildValue("OO", wr, wi);
+
+    }   
+  } else return NULL;
+}
+
+/* conjugate transpose */
+static PyObject*
+cuda_Array_conjugateTranspose(cuda_Array* self) {
+
+  if (!iscomplex(self)) {
+    PyErr_SetString(PyExc_ValueError, "can only take conjugate transpose of complex array");
+    return NULL;
+  }
+  
+  int m = self->a_dims[0];
+  int n = self->a_dims[1];
+
+  cuda_Array* c = make_matrix(n, m, self->a_dtype);
+  if (c == NULL) return NULL;
+
+  void (*LAPACK_fn)() = isdouble(self) ? 
+    (void (*)()) culaDeviceZgeTransposeConjugate : (void (*)()) culaDeviceCgeTransposeConjugate;
+
+  (*LAPACK_fn)(m, n, self->d_mem->d_ptr, max(1,m), c->d_mem->d_ptr, max(1,n));
+  if (culablas_error("deviceGeTransposeConjugate")) 
+    return NULL;
+  else 
+    return Py_BuildValue("O", c);
+}
 #endif
 
 

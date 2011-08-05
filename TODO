@@ -11,3 +11,5 @@
 
 7. long running allocation/deallocation tests for leaks
 8. kernels in c for matrix (as column vectors) normalizer and centralizer
+9. check library error clearing!
+10. improve error reporting for LAPACK

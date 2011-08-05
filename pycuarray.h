@@ -101,6 +101,8 @@ static PyObject* cuda_Array_asum(cuda_Array*);
 static PyObject* cuda_Array_reshape(cuda_Array*, PyObject*);
 #ifdef CULA // LAPACK
 static PyObject* cuda_Array_svd(cuda_Array*);
+static PyObject* cuda_Array_eigensystem(cuda_Array*, PyObject*, PyObject*);
+static PyObject* cuda_Array_conjugateTranspose(cuda_Array*);
 #endif // CULA
 
 #endif
