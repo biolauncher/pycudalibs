@@ -764,14 +764,17 @@ cuda_Array_svd(cuda_Array* self) {
 
 /** 
  *  eigensystem  - values, and/or left right vectors 
+ *    most of the work here is dealing with the awful LAPACK api.
  */
 static PyObject*
 cuda_Array_eigensystem(cuda_Array* self, PyObject* args, PyObject* keywds) {
 
-  /* default to values only */
+  /* default to eigenvalues only */
   int leftv = 0;
   int rightv = 0;
-  static char* kwlist[] = {"left_vectors", "right_vectors", NULL};
+  int pure = 1; // by default we copy our argument so as not to have side-effects
+
+  static char* kwlist[] = {"pure", "left_vectors", "right_vectors", NULL};
 
   /* check matrix is square */
   if (self->a_dims[0] != self->a_dims[1]) {
@@ -780,7 +783,16 @@ cuda_Array_eigensystem(cuda_Array* self, PyObject* args, PyObject* keywds) {
   }
   
   /* parse Python aguments */
-  if (PyArg_ParseTupleAndKeywords(args, keywds, "|ii", kwlist, &leftv, &rightv)) {
+  if (PyArg_ParseTupleAndKeywords(args, keywds, "|iii", kwlist, &pure, &leftv, &rightv)) {
+
+    /* 
+       to maintain purity we just copy the device mem and explicitly dealloc 
+       temporary cuda memory before exit.
+       (we also apply this approach to the dummy eigenvectors below)
+    */
+    void* A = pure ? copy_devmem(self) : self->d_mem->d_ptr;
+    if (A == NULL) return NULL;
+
     /* GEEV params */
     char jobvl = leftv ? 'V' : 'N';
     char jobvr = rightv ? 'V' : 'N';
@@ -798,15 +810,27 @@ cuda_Array_eigensystem(cuda_Array* self, PyObject* args, PyObject* keywds) {
       For complex variants (C/Z): u(j) = VL(:,j), the j-th column of VL.
     */
 
+    /* XXX contrary to the claims of the documentation we cannot pass
+       a null pointer (or even a host pointer) when 'N' is supplied as
+       they are dereferenced in GEEV - so we fake some temps. YETCH! */
+
     /* left eigenvectors */
     int ldvl = leftv ? n : 1;
-    cuda_Array* vl = make_matrix(ldvl, n, self->a_dtype);
-    if (leftv && vl == NULL) return NULL;
+    cuda_Array* vl = leftv ? make_matrix(ldvl, ldvl, self->a_dtype) : NULL;
+    if (leftv && vl == NULL) goto die;
+
+    /* create temp dummy device mem if not returning left vector */
+    void* VL = leftv ? vl->d_mem->d_ptr : deviceAlloc(1, 1, self->e_size);
+    if (VL == NULL) goto die;
 
     /* right eigenvectors */
     int ldvr = rightv ? n : 1;
-    cuda_Array* vr = make_matrix(ldvr, n, self->a_dtype);
-    if (rightv && vr == NULL) return NULL;
+    cuda_Array* vr = rightv ? make_matrix(ldvr, ldvr, self->a_dtype) : NULL;
+    if (rightv && vr == NULL) goto die;
+
+    /* create tmp dummy device mem if not returning right vector */
+    void* VR = rightv ? vr->d_mem->d_ptr : deviceAlloc(1, 1, self->e_size);
+    if (VR == NULL) goto die;
 
     /* LAPACK dispatch based on array type */
     void (*LAPACK_fn)();
@@ -814,17 +838,22 @@ cuda_Array_eigensystem(cuda_Array* self, PyObject* args, PyObject* keywds) {
     if (iscomplex(self)) {
 
       cuda_Array* w = make_vector(n, self->a_dtype);
-      if (w == NULL) return NULL;
+      if (w == NULL) goto die;
 
       LAPACK_fn = isdouble(self) ? (void (*)()) culaDeviceZgeev : (void (*)()) culaDeviceCgeev;
       (*LAPACK_fn)(jobvl, jobvr, n, 
-                   self->d_mem->d_ptr, lda, 
+                   A, lda, 
                    w->d_mem->d_ptr, 
-                   vl->d_mem->d_ptr, ldvl, 
-                   vr->d_mem->d_ptr, ldvr);
+                   VL, ldvl, 
+                   VR, ldvr);
+      
+      /* free any temporary CUDA memory */
+      if (pure && cula_error(culaDeviceFree(A), "dealloc:culaDeviceFreeA")) goto die;
+      if (!leftv && cula_error(culaDeviceFree(VL), "dealloc:culaDeviceFreeVL")) goto die;
+      if (!rightv && cula_error(culaDeviceFree(VR), "dealloc:culaDeviceFreeVR")) goto die;
 
       if (culablas_error("deviceC|Zgesvd"))
-        return NULL;
+        goto die;
       else if (leftv && rightv)
         return Py_BuildValue("OOO", vl, w, vr);
       else if (leftv)
@@ -837,19 +866,26 @@ cuda_Array_eigensystem(cuda_Array* self, PyObject* args, PyObject* keywds) {
     } else {
 
       cuda_Array* wr = make_vector(n, self->a_dtype);
-      if (wr == NULL) return NULL;
+      if (wr == NULL) goto die;
       cuda_Array* wi = make_vector(n, self->a_dtype);
-      if (wi == NULL) return NULL;
+      if (wi == NULL) goto die;
 
       LAPACK_fn = isdouble(self) ? (void (*)()) culaDeviceDgeev : (void (*)()) culaDeviceSgeev;
       (*LAPACK_fn)(jobvl, jobvr, n, 
-                   self->d_mem->d_ptr, lda, 
+                   A, lda, 
                    wr->d_mem->d_ptr, wi->d_mem->d_ptr, 
-                   vl->d_mem->d_ptr, ldvl, 
-                   vr->d_mem->d_ptr, ldvr);
+                   VL, ldvl, 
+                   VR, ldvr);
 
+      /* free any temporary CUDA memory */
+      if (pure && cula_error(culaDeviceFree(A), "dealloc:culaDeviceFreeA")) goto die;
+      if (!leftv && cula_error(culaDeviceFree(VL), "dealloc:culaDeviceFreeVL")) goto die;
+      if (!rightv && cula_error(culaDeviceFree(VR), "dealloc:culaDeviceFreeVR")) goto die;
+
+      /* check on LAPACK call */
       if (culablas_error("deviceS|Dgesvd"))
-        return NULL;
+        goto die;
+    
       else if (leftv && rightv)
         return Py_BuildValue("OOOO", vl, wr, wi, vr);
       else if (leftv)
@@ -858,8 +894,19 @@ cuda_Array_eigensystem(cuda_Array* self, PyObject* args, PyObject* keywds) {
         return Py_BuildValue("OOO", wr, wi, vr);
       else 
         return Py_BuildValue("OO", wr, wi);
+    }
 
-    }   
+  die:
+    /* cleanup any temporary allocations and exit*/
+    if (pure && A != NULL)
+      (void) cula_error(culaDeviceFree(A), "die-dealloc:culaDeviceFreeA");
+    if (!leftv && VL != NULL)
+      (void) cula_error(culaDeviceFree(VL), "die-dealloc:culaDeviceFreeVL");
+    if (!rightv && VR != NULL)
+      (void) cula_error(culaDeviceFree(VR), "die-dealloc:culaDeviceFreeVR");
+    
+    return NULL;
+    
   } else return NULL;
 }
 
@@ -967,7 +1014,7 @@ copy_array(cuda_Array* self) {
     new->a_transposed = self->a_transposed; 
     new->d_mem = NULL;
 
-    // alloc XXX now rows, cols, esize XXX
+    // alloc device memory
     if ((new->d_mem = alloc_cuda_Memory(new->a_dims[0], new->a_dims[1], new->e_size)) == NULL) {
       return NULL;
     }
@@ -986,9 +1033,26 @@ copy_array(cuda_Array* self) {
     new->a_dtype = self->a_dtype;
     Py_INCREF(new->a_dtype);
   }
-  // XXX don't return this to python user directly.
+  // N.B. don't return this to python user directly.
   return new;
 }
+
+/*
+ * this just copies the device memory in an array 
+ *  handy for temporary buffers when LAPACK calls are destructive and we wish
+ *  to preserve purity.
+ */
+static inline void*
+copy_devmem(cuda_Array* self) {
+
+  void* dst = deviceAlloc(self->a_dims[0], self->a_dims[1], self->e_size);
+  if (dst == NULL) return NULL;
+
+  cudaError_t sts =  cudaMemcpy (dst, self->d_mem->d_ptr, a_size(self) , cudaMemcpyDeviceToDevice);
+  if (sts == cudaSuccess) return dst;
+  else return NULL;  
+}
+
 
 /*******************
  * Type descriptors

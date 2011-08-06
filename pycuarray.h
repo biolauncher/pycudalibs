@@ -85,11 +85,17 @@ static inline int a_elements(cuda_Array* d) {
   return (d->a_ndims == 2) ? (d->a_dims[0] * d->a_dims[1]) : (d->a_ndims == 1 ? d->a_dims[0] : 1);
 }
 
+/* return size in bytes of array */
+static inline size_t a_size(cuda_Array* a) {
+  return (size_t) a_elements(a) * a->e_size;
+}
+
 /* static function prototypes */
 static inline cuda_Array* make_vector(int, PyArray_Descr*);
 static inline cuda_Array* make_matrix(int, int, PyArray_Descr*);
 static inline cuda_Array* copy_array(cuda_Array*);
 static inline PyArray_Descr* dtype(int);
+static inline void* copy_devmem(cuda_Array*);
 
 // declare all methods here 
 static PyObject* cuda_Array_dot(cuda_Array*, PyObject*);

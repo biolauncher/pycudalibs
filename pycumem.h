@@ -143,6 +143,19 @@ alloc_cuda_Memory(int rows, int cols, int esize) {
   return self;
 }
 
+/* 
+ * to keep things simple for temporary cuda memory that we do not return to python 
+ */
+static inline void* deviceAlloc(int rows, int cols, int esize) {
+  void* cudamem;
+  int pitch;
+  if (cula_error(culaDeviceMalloc((void**) &cudamem, &pitch, rows, cols, esize),
+                 "cuda_Memory:culaTMPDeviceMalloc"))
+    return NULL;
+  else 
+    return cudamem;
+}
+
 /**
  * embed this in client module init
  */ 
