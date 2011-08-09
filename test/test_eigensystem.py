@@ -21,10 +21,7 @@ class TestEigensystem (unittest.TestCase):
         LV, RU, IU, RV = [x.toarray() for x in A_.eigensystem(left_vectors=True, right_vectors=True)]
         E = RU + 1j * IU # glue egienvalues into complex array
         #
-        print
-        print E
         NE, NLV, NRV = la.eig(A, left=True, right=True)
-        print NE
         self.assert_(test.arrays_equal(E, NE, 1e-03))
 
 

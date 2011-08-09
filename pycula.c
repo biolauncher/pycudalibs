@@ -1,79 +1,79 @@
+/*
+Copyright (C) 2009 Model Sciences Ltd.
+
+This file is part of pycudalibs
+
+    pycudalibs is free software: you can redistribute it and/or modify
+    it under the terms of the Lesser GNU General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    Pycudalibs is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the Lesser GNU General Public
+    License along with pycudalibs.  If not, see <http://www.gnu.org/licenses/>.  
+*/
+
+ 
 /**
- * Bindings to CULA LAPACK routines
+ * Python integration to CULA framework routines.
  *  defines module: _cula 
  */
 
-#define NO_IMPORT_ARRAY */
 #include <pycula.h>
-#include <pycuarray.h>
 
+/**
+ * get number of CUDA devices
+ */
+static PyObject* getDeviceCount(PyObject* self, PyObject* args) {
+  int n_dev;
 
-/*
- gesvd - generalized singular value decomposition
- A = U.S.VT
-*/
-
-static PyObject* gesvd(PyObject* self, PyObject* args) {
-  cuda_Array *A, *S, *U, *VT;
-  char jobu, jobvt;
-
-  if (PyArg_ParseTuple(args, "ccO!O!O!O!", 
-                       &jobu, &jobvt, 
-                       cuda_ArrayType, &A, 
-                       cuda_ArrayType, &S,
-                       cuda_ArrayType, &U,
-                       cuda_ArrayType, &VT)) {
-
-    // XXX any transpose issues?
-    int m = A->a_dims[0];
-    int n = A->a_dims[1];
-
-    // leading dimensions 
-    int lda = A->a_dims[0];
-
-    // TODO make sure output arrays are of required sizes
-
-    int ldu = U->a_dims[0];
-    int ldvt = VT->a_dims[0];
-
-    /*
-      void culaSgesvd
-
-      char jobu -  'A' implies all m columns of U are returned in U, 
-                   'S' the first min(m,n) columns of U are returned in U,
-                   'O' the first min(m.n) columns of U are overwritten in A,
-                   'N' no columns of U (left singular vectors) are computed.
-      char jobvt - 'A' all N rows of VT are returned in VT,
-                   'S' the first min(m,n) rows of VT are returned in VT,
-                   'O' the first min(m,n) rows of VT are overwritten in A,
-                   'N' no rows of VT (right singular vectors) are computed.
-      int m - number of rows in A
-      int n - number of columns in A
-
-      A - m*n matrix to factorize into U S VT
-      int lda - leading dimension of A (>= max(1,m))
-      S - singular values
-      U - left singular vectors
-      int ldu - leading dimension of U 
-      VT - right singular vectors
-      int ldvt - leading dimension of VT
-    */
-
-    culaDeviceSgesvd(jobu, jobvt, m, n, 
-                     A->d_mem->d_ptr, lda, S->d_mem->d_ptr,
-                     U->d_mem->d_ptr, ldu,
-                     VT->d_mem->d_ptr, ldvt);
-
-    if (culablas_error("sgesvd")) 
-      return NULL;
-    else 
-      // build a tuple of arrays
-      return Py_BuildValue("OOO", S, U, VT);
-  
-  } else {
+  if (!PyArg_ParseTuple(args, "")) 
     return NULL;
+  else if (cula_error(culaGetDeviceCount(&n_dev), "culaGetDeviceCount"))
+    return NULL;
+  else 
+    return Py_BuildValue("i", n_dev);
+}
+
+/**
+ * select a cuda device to bind to this thread - must be called
+ * before init.
+ */
+static PyObject* selectDevice(PyObject* self, PyObject* args) {
+  int devno;
+
+  if (!PyArg_ParseTuple(args, "i", &devno)) 
+    return NULL;
+  else if (cula_error(culaSelectDevice(devno), "culaSelectDevice"))
+    return NULL;
+  else 
+    return Py_BuildValue("");
+
+}
+
+static PyObject* init(PyObject* self, PyObject* args) {
+  if (!PyArg_ParseTuple(args, "")) 
+    return NULL;
+  else if (cula_error(culaInitialize(), "culaInitialize"))
+    return NULL;
+  else 
+    return Py_BuildValue("");
+}
+
+static PyObject* shutdown(PyObject* self, PyObject* args) {
+  if (!PyArg_ParseTuple(args, "")) 
+    return NULL;
+  // culaShutdown doesn't return any value
+  else {
+    culaShutdown();
+    return Py_BuildValue("");
   }
 }
+
 
 /************************
  * module function table
@@ -81,9 +81,17 @@ static PyObject* gesvd(PyObject* self, PyObject* args) {
 
 static PyMethodDef _cula_methods[] = {
 
-  {"gesvd", gesvd, METH_VARARGS,
-   "Singular value decomposition of a single precision real matrix A (A = U S VT)"},
+  {"device_count", getDeviceCount, METH_VARARGS,
+   "Get the number of CUDA capable devices."},
 
+  {"select_device", selectDevice, METH_VARARGS,
+   "Select the CUDA device to attach to the host thread."},
+
+  {"init", init, METH_VARARGS, 
+   "Initialise CULA library by attaching to CUDA device that is bound to the calling host thread."},
+
+  {"close", shutdown, METH_VARARGS,
+   "Shutdown the CULA library."},
   {NULL, NULL, 0, NULL}
 };
 
@@ -94,5 +102,5 @@ PyMODINIT_FUNC init_cula(void) {
   // initialise the module
   PyObject* module = Py_InitModule("_cula", _cula_methods);
   if (module == NULL) return;
-  import_cunumpy();
 }
+

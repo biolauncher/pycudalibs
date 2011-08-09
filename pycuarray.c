@@ -273,7 +273,7 @@ static PyMethodDef cuda_Array_methods[] = {
    "Reshape the dimensions of a CUDA device array."},
 
 #ifdef CULA
-  {"svd", (PyCFunction) cuda_Array_svd, METH_VARARGS,
+  {"svd", (PyCFunction) cuda_Array_svd, METH_VARARGS | METH_KEYWORDS,
    "Singular value decomposion of CUDA array - returns tuple of (U S VT) device arrays."},
   {"eigensystem", (PyCFunction) cuda_Array_eigensystem, METH_VARARGS | METH_KEYWORDS,
    "Compute eigenvalues and optionally left and/or right eigenvectors of a square matrix."},
@@ -719,7 +719,7 @@ cuda_Array_copy(cuda_Array *self) {
 #ifdef CULA
 
 static PyObject*
-cuda_Array_svd(cuda_Array* self) {
+cuda_Array_svd(cuda_Array* self, PyObject* args, PyObject* keywds) {
 
   // dimensions
   int m = self->a_dims[0];
@@ -728,39 +728,56 @@ cuda_Array_svd(cuda_Array* self) {
   int ldu = m;
   int ldvt = min(m,n);
 
-  // allocate device arrays to recieve svd results
-  cuda_Array *U = make_matrix(m, min(m,n), self->a_dtype);
-  if (U == NULL) return NULL;
-  // S is always real
-  cuda_Array *S = make_vector(min(m,n), dtype(isdouble(self) ? NPY_FLOAT64 : NPY_FLOAT32));
-  if (S == NULL) return NULL;
-  cuda_Array *VT = make_matrix(min(m,n), min(m,n), self->a_dtype);
-  if (VT == NULL) return NULL;
+  static char* kwlist[] = {"pure", NULL};
+  int pure = 1;
 
-  /* LAPACK dispatch based on array type */
-  void (*LAPACK_fn)();
+  /* parse Python aguments */
+  if (PyArg_ParseTupleAndKeywords(args, keywds, "|i", kwlist, &pure)) {
+
+    // allocate device arrays to recieve svd results
+    cuda_Array *U = make_matrix(m, min(m,n), self->a_dtype);
+    if (U == NULL) return NULL;
+  
+    // S is always real
+    cuda_Array *S = make_vector(min(m,n), dtype(isdouble(self) ? NPY_FLOAT64 : NPY_FLOAT32));
+    if (S == NULL) return NULL;
+  
+    cuda_Array *VT = make_matrix(min(m,n), min(m,n), self->a_dtype);
+    if (VT == NULL) return NULL;
+
+    /* copy device memory */
+    void* A = pure ? copy_devmem(self) : self->d_mem->d_ptr;
+    if (A == NULL) return NULL;
+
+    /* LAPACK dispatch based on array type */
+    void (*LAPACK_fn)();
  
-  if (iscomplex(self))
-    LAPACK_fn = isdouble(self) ? (void (*)()) culaDeviceZgesvd : (void (*)()) culaDeviceCgesvd;
-  else
-    LAPACK_fn = isdouble(self) ? (void (*)()) culaDeviceDgesvd : (void (*)()) culaDeviceSgesvd;
+    if (iscomplex(self))
+      LAPACK_fn = isdouble(self) ? (void (*)()) culaDeviceZgesvd : (void (*)()) culaDeviceCgesvd;
+    else
+      LAPACK_fn = isdouble(self) ? (void (*)()) culaDeviceDgesvd : (void (*)()) culaDeviceSgesvd;
   
 
-  /* N.B. array 'self' contents are always destroyed by LAPACK! */
-  // TODO: my functional instincts say we should copy self!
-
-  (*LAPACK_fn)('S', 'S', self->a_dims[0], self->a_dims[1], 
-               self->d_mem->d_ptr, lda,
-               S->d_mem->d_ptr,
-               U->d_mem->d_ptr, ldu,
-               VT->d_mem->d_ptr, ldvt);
+    /* N.B. array A contents are always destroyed by LAPACK! */
+    
+    (*LAPACK_fn)('S', 'S', self->a_dims[0], self->a_dims[1], 
+                 A, lda,
+                 S->d_mem->d_ptr,
+                 U->d_mem->d_ptr, ldu,
+                 VT->d_mem->d_ptr, ldvt);
   
-  if (culablas_error("device_gesvd"))
-    return NULL;
-  else 
-    return Py_BuildValue("OOO", U, S, VT);
+    if (culablas_error("device_gesvd")) {
+      if (pure && cula_error(culaDeviceFree(A), "dealloc:culaDeviceFreeA"));
+      return NULL;
+
+    } else {
+      /* free copied device memory */
+      if (pure && cula_error(culaDeviceFree(A), "dealloc:culaDeviceFreeA")) return NULL;
+      else return Py_BuildValue("OOO", U, S, VT);
+    }
+
+  } else return NULL; // argument error
 }
-
 
 /** 
  *  eigensystem  - values, and/or left right vectors 
@@ -820,7 +837,7 @@ cuda_Array_eigensystem(cuda_Array* self, PyObject* args, PyObject* keywds) {
     if (leftv && vl == NULL) goto die;
 
     /* create temp dummy device mem if not returning left vector */
-    void* VL = leftv ? vl->d_mem->d_ptr : deviceAlloc(1, 1, self->e_size);
+    void* VL = leftv ? vl->d_mem->d_ptr : deviceAllocTmp(1, 1, self->e_size);
     if (VL == NULL) goto die;
 
     /* right eigenvectors */
@@ -829,7 +846,7 @@ cuda_Array_eigensystem(cuda_Array* self, PyObject* args, PyObject* keywds) {
     if (rightv && vr == NULL) goto die;
 
     /* create tmp dummy device mem if not returning right vector */
-    void* VR = rightv ? vr->d_mem->d_ptr : deviceAlloc(1, 1, self->e_size);
+    void* VR = rightv ? vr->d_mem->d_ptr : deviceAllocTmp(1, 1, self->e_size);
     if (VR == NULL) goto die;
 
     /* LAPACK dispatch based on array type */
@@ -921,8 +938,8 @@ cuda_Array_conjugateTranspose(cuda_Array* self) {
   
   int m = self->a_dims[0];
   int n = self->a_dims[1];
-
-  cuda_Array* c = make_matrix(n, m, self->a_dtype);
+  
+  cuda_Array* c = isvector(self) ? make_vector(m, self->a_dtype) : make_matrix(n, m, self->a_dtype);
   if (c == NULL) return NULL;
 
   void (*LAPACK_fn)() = isdouble(self) ? 
@@ -1045,12 +1062,48 @@ copy_array(cuda_Array* self) {
 static inline void*
 copy_devmem(cuda_Array* self) {
 
-  void* dst = deviceAlloc(self->a_dims[0], self->a_dims[1], self->e_size);
+  void* dst = deviceAllocTmp(self->a_dims[0], self->a_dims[1], self->e_size);
   if (dst == NULL) return NULL;
 
-  cudaError_t sts =  cudaMemcpy (dst, self->d_mem->d_ptr, a_size(self) , cudaMemcpyDeviceToDevice);
-  if (sts == cudaSuccess) return dst;
-  else return NULL;  
+  if (cuda_error2(cudaMemcpy (dst, self->d_mem->d_ptr, a_size(self), cudaMemcpyDeviceToDevice),
+                  "cudaMemory:cudaMemcpy2d:copy_devmem"))
+    return NULL;
+                  
+  else return dst;  
+}
+
+/*
+ * 2d array copies with pitched mem
+ */
+static inline void*
+copy_devmem2d(cuda_Array* self) {
+  
+  void* dst;
+  int dpitch;
+
+  //TODO understand the pitch bitch and hw our fortran arrays map to 2d 
+  //TODO check if we are copying a matrix or a vector and use the appropriate allocator
+  //TODO move all this to pycumem.h and standardise memory allocation
+  // cudaError_t cudaMallocPitch (void ∗∗ dst, size_t ∗ dpitch, size_t width, size_t height)
+
+  if (cula_error(culaDeviceMalloc((void**) &dst, &dpitch, self->a_dims[0], self->a_dims[1], self->e_size),
+                 "cuda_Memory:culaDeviceMalloc:copy_devmem2d"))
+    return NULL;
+  
+  int width = self->a_dims[1]; // columns
+  int height = self->a_dims[0]; // rows
+
+  trace("cudaMemcpy2D: dpitch=%d, spitch=%d, width=%d, height=%d\n", dpitch, self->d_mem->d_pitch, width, height);
+  // 2d array copy dev2dev XXX don't understand width and height here yet!
+  if (cuda_error2(cudaMemcpy2D (dst, (size_t) dpitch, 
+                                self->d_mem->d_ptr, self->d_mem->d_pitch, 
+                                width, 
+                                height, 
+                                cudaMemcpyDeviceToDevice), 
+                  "cudaMemory:cudaMemcpy2d:copy_devmem2d"))
+    return NULL;
+  
+  else return dst;
 }
 
 

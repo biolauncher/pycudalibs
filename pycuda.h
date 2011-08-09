@@ -17,9 +17,9 @@ This file is part of pycudalibs
     License along with pycudalibs.  If not, see <http://www.gnu.org/licenses/>.  
 */
 
-#if defined(_PYCUBLAS_H)
+#if defined(_PYCUDA_H)
 #else
-#define _PYCUBLAS_H 1
+#define _PYCUDA_H 1
 
 #include <cublas.h>
 #include <pycunumpy.h>
@@ -57,7 +57,7 @@ static inline char* get_cublas_error_text(cublasStatus sts) {
   }
 }
 
-/* CUDA error handling */
+/* CUDA error handling XXX deprecated rename as cudablas_error */
 static inline int cuda_error(int status, char* where) {
   trace("CUDACALL %s: status = %d\n", where, status);
 
@@ -65,11 +65,27 @@ static inline int cuda_error(int status, char* where) {
     return 0;
 
   } else {
-    PyErr_SetString(cuda_exception, get_cublas_error_text(status));
+    
     return 1;
   }
 }
 
+/* new CUDA error handling */
+static inline cuda_error2(cudaError_t sts, char* info) {
+  if (sts != cudaSuccess) {
+    const char* error_text = cudaGetErrorString(sts);
+    PyErr_SetString(cuda_exception, error_text);
+
+    trace("CUDA_EXCEPTION\t %s\t(%d)\t%s\n", info, sts, error_text);
+    return 1;
+
+  } else {
+    trace("CUDA_SUCCESS\t %s\n", info);
+    return 0;
+  }
+}
+
+/* cublas error */
 static inline int cublas_error(char* where) {
   return cuda_error(cublasGetError(), where);
 }

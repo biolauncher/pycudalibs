@@ -17,13 +17,13 @@
 #    License along with pycudalibs.  If not, see <http://www.gnu.org/licenses/>.  
 
 import _cunumpy
-import _cublas
+import _cula
 
 class CUDAdevice (object):
 
     def __init__(self, device_number=0):
-        _cublas.select_device(device_number)
-        _cublas.init()
+        _cula.select_device(device_number)
+        _cula.init()
 
     def __enter__(self):
         return self
@@ -39,10 +39,10 @@ class CUDAdevice (object):
         
     @staticmethod
     def device_count():
-        return _cublas.device_count()
+        return _cula.device_count()
 
     def close(self):
-        _cublas.close()
+        _cula.close()
 
 #
 # extend _cunumpy.array 

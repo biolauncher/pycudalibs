@@ -91,18 +91,6 @@ cunumpy = Extension('_cunumpy',
                     library_dirs = library_dirs,
                     sources = ['pycunumpy.c', 'pycuarray.c'])
 
-cublas = Extension('_cublas',
-                   define_macros = [
-                       ('CUBLAS', '1'),
-                       ('CULA', '1'),
-                       ('CULA_USE_CUDA_COMPLEX', '1'),
-                       ('MAJOR_VERSION', '1'),
-                       ('MINOR_VERSION', '0'),
-                       ('DEBUG', '0')],
-                   include_dirs = includes,
-                   libraries = [BLAS, LAPACK],
-                   library_dirs = library_dirs,
-                   sources = ['pycublas.c'])
 
 culax = Extension('_cula',
                   define_macros = [
@@ -125,6 +113,6 @@ setup (name = 'cunumpy',
        author_email = 'ix@modelsciences.com',
        url = 'http://www.modelsciences.com',
        long_description = 'APIs for CUDA and CULA libraries with support for numpy arrays. see README.',
-       ext_modules = [cunumpy, cublas, culax],
+       ext_modules = [cunumpy, culax],
        py_modules = ['gpu', 'cunumpy'],
        requires=['numpy(>=1.2)'])

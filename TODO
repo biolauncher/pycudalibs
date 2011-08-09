@@ -1,15 +1,23 @@
 1. check we are using CULA devdev interface partout
 2. best pitch for transposed arrays
 3. LDA implications for LAPACK and transposed arrays - does LAPACK assume fortran layout?
-4. implement SVD
+
+4. implement SVD - done
 5. pycunumpy wrapper
+
 6. test cases for LAPACK
-	test_lapack
-	test_svd
-	test_eigensystem
-	...
+	test_lapack ++
+	test_svd ++
+	test_eigensystem +- 
+	test_adjoint +-
 
 7. long running allocation/deallocation tests for leaks
-8. kernels in c for matrix (as column vectors) normalizer and centralizer
+
+8. kernels in c for matrix (as column vectors) normalizer and centralizer...
+
 9. check library error clearing!
 10. improve error reporting for LAPACK
+
+11. deprecate _cublas module -> extract generic/device bits to _cuda - remove low level api?
+12. deprecate pycula low level api.
+13. split pycuarray.c into base, blas and lapack dependant bits (sub-classes?)

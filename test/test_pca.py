@@ -7,12 +7,7 @@ dev=gpu.CUDAdevice(0)
 
 def pca_test():
     A_=cn.array(iris.data, dtype=cn.float32)
-    print A_
-
-    X_=A_.T.dot(A_)
-
-    print X_
-    print X_.toarray()
-
+    # TODO centralizer kernel
+    X_=A_.T.dot(A_).eigensystem(pure=False)    # no need to preserve intermediate matrix
     return X_
 

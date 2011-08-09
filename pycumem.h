@@ -28,8 +28,9 @@ This file is part of pycudalibs
 
 /* may use CUDA memory from either of these providers */
 
-#include <pycublas.h>
+#include <pycuda.h>
 #include <pycula.h>
+
 #include <pylibs.h>
 
 #define CUDA_MEMORY_TYPE_NAME "cuda.memory"
@@ -145,10 +146,12 @@ alloc_cuda_Memory(int rows, int cols, int esize) {
 
 /* 
  * to keep things simple for temporary cuda memory that we do not return to python 
+ * XXX new memory allocators will deprecate this
  */
-static inline void* deviceAlloc(int rows, int cols, int esize) {
+static inline void* deviceAllocTmp(int rows, int cols, int esize) {
   void* cudamem;
   int pitch;
+
   if (cula_error(culaDeviceMalloc((void**) &cudamem, &pitch, rows, cols, esize),
                  "cuda_Memory:culaTMPDeviceMalloc"))
     return NULL;

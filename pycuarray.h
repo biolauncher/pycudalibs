@@ -96,8 +96,9 @@ static inline cuda_Array* make_matrix(int, int, PyArray_Descr*);
 static inline cuda_Array* copy_array(cuda_Array*);
 static inline PyArray_Descr* dtype(int);
 static inline void* copy_devmem(cuda_Array*);
+static inline void* copy_devmem2d(cuda_Array*);
 
-// declare all methods here 
+// declare all cuda_Array methods here 
 static PyObject* cuda_Array_dot(cuda_Array*, PyObject*);
 static PyObject* cuda_Array_transpose(cuda_Array*, PyObject*);
 static PyObject* cuda_Array_scale(cuda_Array*, PyObject*);
@@ -106,7 +107,7 @@ static PyObject* cuda_Array_2norm(cuda_Array*);
 static PyObject* cuda_Array_asum(cuda_Array*);
 static PyObject* cuda_Array_reshape(cuda_Array*, PyObject*);
 #ifdef CULA // LAPACK
-static PyObject* cuda_Array_svd(cuda_Array*);
+static PyObject* cuda_Array_svd(cuda_Array*, PyObject*, PyObject*);
 static PyObject* cuda_Array_eigensystem(cuda_Array*, PyObject*, PyObject*);
 static PyObject* cuda_Array_conjugateTranspose(cuda_Array*);
 #endif // CULA
