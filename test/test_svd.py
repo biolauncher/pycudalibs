@@ -14,8 +14,16 @@ class TestSVD (unittest.TestCase):
 
     #
     # SVD 
-    # TODO: make sure A_ == A after call - currently this is not the case as A_ is destroyed by LAPACK
+    #
     
+    # make sure A_ == A after call
+    def test_fn_purity(self):
+        A_ = cn.array(self.real_mata, dtype=cn.float32)
+        A = np.array(self.real_mata, dtype=np.float32)
+        # gpu
+        U, S, VT = [x.toarray() for x in A_.svd()]
+        self.assert_(test.arrays_equal(A, A_.toarray()))
+          
     def test_real_single_matrix_svd(self):
         A_ = cn.array(self.real_mata, dtype=cn.float32)
         A = np.array(self.real_mata, dtype=np.float32)
@@ -57,9 +65,11 @@ class TestSVD (unittest.TestCase):
 
 def suite_single():
     suite = unittest.TestSuite()
-    tests = ['test_real_single_matrix_svd'
-             ,'test_complex_single_matrix_svd'
-             ]
+    tests = [
+        'test_fn_purity',
+        'test_real_single_matrix_svd',
+        'test_complex_single_matrix_svd'
+        ]
 
     return unittest.TestSuite(map(TestSVD, tests))
 

@@ -16,9 +16,8 @@
 #    You should have received a copy of the Lesser GNU General Public
 #    License along with pycudalibs.  If not, see <http://www.gnu.org/licenses/>.  
 
-
-import gpu
 import numpy
+import _cunumpy
 
 #
 # the supported dtype(s)
@@ -35,22 +34,22 @@ array_types = [float32, float64, complex64, complex128]
 # functions to provide numpy like factory methods for cunumpy.array objects
 #
 def array(*args, **keyw):
-    return gpu.CUDAarray(numpy.array(*args, **keyw), **keyw)
+    return _cunumpy.array(numpy.array(*args, **keyw), **keyw)
 
 def arange(*args, **keyw):
-    return gpu.CUDAarray(numpy.arange(*args, **keyw), **keyw)
+    return _cunumpy.array(numpy.arange(*args, **keyw), **keyw)
 
 def eye(*args, **keyw):
-    return gpu.CUDAarray(numpy.eye(*args, **keyw), **keyw)
+    return _cunumpy.array(numpy.eye(*args, **keyw), **keyw)
 
 def zeros(*args, **keyw):
-    return gpu.CUDAarray(numpy.zeros(*args, **keyw), **keyw)
+    return _cunumpy.array(numpy.zeros(*args, **keyw), **keyw)
 
 def ones(*args, **keyw):
-    return gpu.CUDAarray(numpy.ones(*args, **keyw), **keyw)
+    return _cunumpy.array(numpy.ones(*args, **keyw), **keyw)
 
 def identity(*args, **keyw):
-    return gpu.CUDAarray(numpy.identity(*args, **keyw), **keyw)
+    return _cunumpy.array(numpy.identity(*args, **keyw), **keyw)
 
 
 

@@ -11,8 +11,16 @@ class TestEigensystem (unittest.TestCase):
         self.complex_mata = np.random.randn(10,10) + 1j * np.random.randn(10,10)
 
     #
-    # SVD 
-    # TODO: make sure A_ == A after call - currently this is not the case as A_ is destroyed by LAPACK
+    # SVD
+    
+    # make sure A_ == A after call
+    def test_fn_purity(self):
+        A_ = cn.array(self.real_mata, dtype=cn.float32)
+        A = np.array(self.real_mata, dtype=np.float32)
+        # gpu
+        RU, IU = [x.toarray() for x in A_.eigensystem()]
+        self.assert_(test.arrays_equal(A, A_.toarray()))
+        
     
     def test_real_single_matrix_eigensystem(self):
         A_ = cn.array(self.real_mata, dtype=cn.float32)
@@ -29,44 +37,49 @@ class TestEigensystem (unittest.TestCase):
         A_ = cn.array(self.real_mata, dtype=cn.float64)
         A = np.array(self.real_mata, dtype=np.float64)
         # gpu
-        U, S, VT = [x.toarray() for x in A_.svd()]
-        R = np.dot(U, np.dot(np.diag(S), VT))
-        #print S
-        self.assert_(test.arrays_equal(R, A, 1e-03))
+        LV, E, RV = [x.toarray() for x in A_.eigensystem(left_vectors=True, right_vectors=True)]
+        # cpu
+        NE, NLV, NRV = la.eig(A, left=True, right=True)
+        self.assert_(test.arrays_equal(E, NE, 1e-03))
        
 
     def test_complex_single_matrix_eigensystem(self):
         A_ = cn.array(self.complex_mata, dtype=cn.complex64)
         A = np.array(self.complex_mata, dtype=np.complex64)
         # gpu
-        U, S, VT = [x.toarray() for x in A_.svd()]
-        R = np.dot(U, np.dot(np.diag(S), VT))
-        self.assert_(test.arrays_equal(R, A, 1e-03))
+        LV, E, RV = [x.toarray() for x in A_.eigensystem(left_vectors=True, right_vectors=True)]
+        # cpu
+        NE, NLV, NRV = la.eig(A, left=True, right=True)
+        self.assert_(test.arrays_equal(E, NE, 1e-03))
        
        
     def test_complex_double_matrix_eigensystem(self):
         A_ = cn.array(self.complex_mata, dtype=cn.complex128)
         A = np.array(self.complex_mata, dtype=np.complex128)
         # gpu
-        U, S, VT = [x.toarray() for x in A_.svd()]
-        R = np.dot(U, np.dot(np.diag(S), VT))
-        #print S
-        self.assert_(test.arrays_equal(R, A, 1e-03))
+        LV, E, RV = [x.toarray() for x in A_.eigensystem(left_vectors=True, right_vectors=True)]
+        # cpu
+        NE, NLV, NRV = la.eig(A, left=True, right=True)
+        self.assert_(test.arrays_equal(E, NE, 1e-03))
+       
 
 
 def suite_single():
     suite = unittest.TestSuite()
-    tests = ['test_real_single_matrix_eigensystem'
-             #,'test_complex_single_matrix_eigensystem'
-             ]
+    tests = [
+        'test_fn_purity',
+        'test_real_single_matrix_eigensystem',
+        'test_complex_single_matrix_eigensystem'
+        ]
 
     return unittest.TestSuite(map(TestEigensystem, tests))
 
 def suite_double():
     suite = unittest.TestSuite()
-    tests = ['test_real_double_matrix_eigensystem'
-             ,'test_complex_double_matrix_eigensystem'
-             ]
+    tests = [
+        'test_real_double_matrix_eigensystem',
+        'test_complex_double_matrix_eigensystem'
+        ]
     return unittest.TestSuite(map(TestEigensystem, tests))
 
 def suite():

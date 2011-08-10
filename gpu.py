@@ -16,7 +16,6 @@
 #    You should have received a copy of the Lesser GNU General Public
 #    License along with pycudalibs.  If not, see <http://www.gnu.org/licenses/>.  
 
-import _cunumpy
 import _cula
 
 class CUDAdevice (object):
@@ -44,11 +43,4 @@ class CUDAdevice (object):
     def close(self):
         _cula.close()
 
-#
-# extend _cunumpy.array 
-#
-class CUDAarray(_cunumpy.array):
-    """
-    Encapsulates CUDA device based arrays numpy style.
-    """
-    pass
+
