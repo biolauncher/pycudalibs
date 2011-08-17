@@ -7,13 +7,14 @@
 
 # time for autotools?
 # so what is this library called: cudaml - CUDA machine learning
+DEBUG=0
 LIB=cudaml
 THELIB = lib$(LIB).dylib
 KERNELS = null.cu simple.cu centraliser.cu reduction.cu
 
-$(THELIB):	Makefile $(KERNELS)
-	nvcc  -Xcompiler -fno-strict-aliasing,-fPIC -o $(THELIB) --shared -I/usr/local/cuda/include -I. $(KERNELS) 
+$(THELIB):	Makefile $(KERNELS) cudautl.h cudaml.h
+	nvcc  -Xcompiler -fno-strict-aliasing,-fPIC,-DDEBUG=$(DEBUG) -o $(THELIB) --shared -I/usr/local/cuda/include -I. $(KERNELS) 
 
 test:	$(THELIB) test.c
-	gcc -m32 -o test test.c -I/usr/local/cuda/include -I. -L/usr/local/cuda/lib -lcuda -lcudart -L. -l$(LIB)
-	./test
+	gcc -DDEBUG=$(DEBUG) -m32 -o test test.c -I/usr/local/cuda/include -I. -L/usr/local/cuda/lib -lcuda -lcudart -L. -l$(LIB)
+

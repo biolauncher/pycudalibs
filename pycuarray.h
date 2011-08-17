@@ -118,6 +118,7 @@ static PyObject* cuda_Array_conjugateTranspose(cuda_Array*);
 #endif // CULA
 #ifdef CUDAML
 static PyObject* cuda_Array_centralise(cuda_Array*);
+static PyObject* cuda_Array_sum(cuda_Array*);
 #endif // CUDAML
 
 #endif

@@ -283,7 +283,9 @@ static PyMethodDef cuda_Array_methods[] = {
 
 #ifdef CUDAML
   {"centralise", (PyCFunction) cuda_Array_centralise, METH_VARARGS,
-   "Centralised (zero sum) in each column of matrix/vector"},
+   "Centralised (zero sum) in each column of matrix/vector."},
+  {"sum", (PyCFunction) cuda_Array_sum, METH_VARARGS,
+   "Sum of matrix/vector."},
 #endif
 
   {NULL, NULL, 0, NULL} 
@@ -962,7 +964,7 @@ cuda_Array_conjugateTranspose(cuda_Array* self) {
 /**********************************
  * CULAML custom ml kernel library 
  **********************************/
-#warning "compiling in CUDAML functions"
+
 static PyObject*
 cuda_Array_centralise(cuda_Array* self) {
 
@@ -972,6 +974,18 @@ cuda_Array_centralise(cuda_Array* self) {
     return Py_BuildValue("O", self);
                   
 }
+
+static PyObject*
+cuda_Array_sum(cuda_Array* self) {
+
+  float sum;
+
+  if (cuda_error2(cudaml_asum(self->d_mem->d_ptr, a_elements(self), &sum), "cuda_Array_sum"))
+    return NULL;
+  else
+    return Py_BuildValue("f", sum);
+}
+
 #endif // CUDAML
 
 /***************************************************************************

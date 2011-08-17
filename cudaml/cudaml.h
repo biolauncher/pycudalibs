@@ -11,8 +11,9 @@ extern "C" {
   // Library functions
   cudaError_t null(void);
   cudaError_t simple(void*, size_t);
+  // Real functions here
   cudaError_t cudaml_centraliser(void*, void*, size_t, size_t);
-  cudaError_t sum(float*, size_t, float*);
+  cudaError_t cudaml_asum(float*, size_t, float*);
 #ifdef __cplusplus
 }
 #endif

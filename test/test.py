@@ -15,5 +15,5 @@ def close(a, b, rtol=1e-05, atol=1e-08):
 
 def scalars_equal(a, b, epsilon=0.00004):
     #print a, b, abs(a-b)
-    return close(a, b)
+    return close(a, b, epsilon)
     #return abs(a-b) < epsilon
