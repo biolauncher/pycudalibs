@@ -68,7 +68,20 @@ if dsys.get_config_var("SIZEOF_LONG") == 8 and os.path.exists(cuda_lib64) and os
     print 'Building with 64 bit libraries' 
 else:
     library_dirs = [cula_lib, cuda_lib]
-    
+
+# cudaml custom kernel integration
+CUDAML_LIB = ''
+cudaml = './cudaml'
+cudaml_include = cudaml
+cudaml_lib = cudaml
+
+if os.path.exists(cudaml):
+    library_dirs += [cudaml_lib]
+    includes += [cudaml_include]
+    CUDAML_LIB = 'cudaml'
+
+print '****', includes, library_dirs
+
 #####################
 # extension modules #
 #####################
@@ -82,12 +95,13 @@ cunumpy = Extension('_cunumpy',
                     define_macros = [
                         ('CUBLAS', '1'),
                         ('CULA', '1'),
+                        ('CUDAML', '1'),
                         ('CULA_USE_CUDA_COMPLEX', '1'),
                         ('MAJOR_VERSION', '1'),
-                        ('MINOR_VERSION', '0'),
+                        ('MINOR_VERSION', '3'),
                         ('DEBUG', '0')],
                     include_dirs = includes,
-                    libraries = [BLAS, LAPACK],
+                    libraries = [BLAS, LAPACK, CUDAML_LIB],
                     library_dirs = library_dirs,
                     sources = ['pycunumpy.c', 'pycuarray.c'])
 

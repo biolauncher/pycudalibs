@@ -281,6 +281,11 @@ static PyMethodDef cuda_Array_methods[] = {
    "Conjugate transpose of a matrix"},
 #endif
 
+#ifdef CUDAML
+  {"centralise", (PyCFunction) cuda_Array_centralise, METH_VARARGS,
+   "Centralised (zero sum) in each column of matrix/vector"},
+#endif
+
   {NULL, NULL, 0, NULL} 
 };
 
@@ -953,6 +958,21 @@ cuda_Array_conjugateTranspose(cuda_Array* self) {
 }
 #endif
 
+#ifdef CUDAML
+/**********************************
+ * CULAML custom ml kernel library 
+ **********************************/
+#warning "compiling in CUDAML functions"
+static PyObject*
+cuda_Array_centralise(cuda_Array* self) {
+
+  if (cuda_error2(null(), "cuda_Array_centralise"))
+    return NULL;
+  else
+    return Py_BuildValue("O", self);
+                  
+}
+#endif // CUDAML
 
 /***************************************************************************
  * helper methods for constructing arrays and vectors these are not part of

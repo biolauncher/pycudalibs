@@ -28,6 +28,11 @@ This file is part of pycudalibs
  
 #include <Python.h>
 
+/* custom ML kernels */
+#ifdef CUDAML
+#include <cudaml.h>
+#endif
+
 /* cuda memory */
 #include <pycumem.h>
 
@@ -111,5 +116,8 @@ static PyObject* cuda_Array_svd(cuda_Array*, PyObject*, PyObject*);
 static PyObject* cuda_Array_eigensystem(cuda_Array*, PyObject*, PyObject*);
 static PyObject* cuda_Array_conjugateTranspose(cuda_Array*);
 #endif // CULA
+#ifdef CUDAML
+static PyObject* cuda_Array_centralise(cuda_Array*);
+#endif // CUDAML
 
 #endif
