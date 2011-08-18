@@ -46,7 +46,7 @@ test32:	$(LIB32) test.c
 	gcc -DDEBUG=$(DEBUG) $(ARCH32) -o test test.c -I$(CUDAINC) -I$(INCLUDEDIR) -I. -L$(CUDALIB32) -lcuda -lcudart -L$(LIBDIR32) -l$(LIBNAME)
 
 test64:	$(LIB64) test.c
-	gcc -DDEBUG=$(DEBUG) $(ARCH64) -o test test.c -I$(CUDAINC) -I$(INCLUDEDIR) -I. -L$(CUDALIB32) -lcuda -lcudart -L$(LIBDIR64) -l$(LIBNAME)
+	gcc -DDEBUG=$(DEBUG) $(ARCH64) -o test test.c -I$(CUDAINC) -I$(INCLUDEDIR) -I. -L$(CUDALIB64) -lcuda -lcudart -L$(LIBDIR64) -l$(LIBNAME)
 
 clean:
 	rm $(LIB32) $(LIB64)
