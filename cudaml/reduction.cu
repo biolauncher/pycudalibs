@@ -6,19 +6,17 @@
  ************************************************/
 
 /* Utility class used to avoid linker errors with extern unsized
-   shared memory arrays with templated type */
+   shared memory arrays of templated type */
 
 template<class T>
-struct SharedMemory
-{
-    __device__ inline operator       T*()
-    {
+struct SharedMemory {
+
+    __device__ inline operator       T*() {
         extern __shared__ int __smem[];
         return (T*)__smem;
     }
 
-    __device__ inline operator const T*() const
-    {
+    __device__ inline operator const T*() const {
         extern __shared__ int __smem[];
         return (T*)__smem;
     }
@@ -26,13 +24,13 @@ struct SharedMemory
 
 
 /*
-    This version adds multiple elements per thread sequentially.  This reduces the overall
-    cost of the algorithm while keeping the work complexity O(n) and the step complexity O(log n).
-    (Brent's Theorem optimization)
+    This kernel reduces multiple elements per thread sequentially.
+    This reduces the overall cost of the algorithm while keeping the
+    work complexity O(n) and the step complexity O(log n).
 
-    Note, this kernel needs a minimum of 64*sizeof(T) bytes of shared memory.
+    N.B. needs a minimum of 64*sizeof(T) bytes of shared memory.
     In other words if blockSize <= 32, allocate 64*sizeof(T) bytes.
-    If blockSize > 32, allocate blockSize*sizeof(T) bytes.
+    else if blockSize > 32, allocate blockSize*sizeof(T) bytes.
 */
 template <class T, unsigned int blockSize, bool nIsPow2>
 __global__ void
@@ -47,43 +45,41 @@ sum_reduce_kernel(T *g_idata, T *g_odata, unsigned int n) {
   unsigned int i = blockIdx.x*blockSize*2 + threadIdx.x;
   unsigned int gridSize = blockSize*2*gridDim.x;
 
-  T mySum = 0;
+  T reduction = 0;
 
   /* we reduce multiple elements per thread.  The number is determined by the
      number of active thread blocks (via gridDim).  More blocks will result
      in a larger gridSize and therefore fewer elements per thread */
 
   while (i < n) {
-    mySum += g_idata[i];
+    reduction += g_idata[i];
     // ensure we don't read out of bounds -- this is optimized away for powerOf2 sized arrays
     if (nIsPow2 || i + blockSize < n)
-        mySum += g_idata[i+blockSize];
+        reduction += g_idata[i+blockSize];
     i += gridSize;
   }
 
   // each thread puts its local sum into shared memory
-  sdata[tid] = mySum;
+  sdata[tid] = reduction;
   __syncthreads();
 
 
   // do reduction in shared mem
-  if (blockSize >= 512) { if (tid < 256) { sdata[tid] = mySum = mySum + sdata[tid + 256]; } __syncthreads(); }
-  if (blockSize >= 256) { if (tid < 128) { sdata[tid] = mySum = mySum + sdata[tid + 128]; } __syncthreads(); }
-  if (blockSize >= 128) { if (tid <  64) { sdata[tid] = mySum = mySum + sdata[tid +  64]; } __syncthreads(); }
+  if (blockSize >= 512) { if (tid < 256) { sdata[tid] = reduction = reduction + sdata[tid + 256]; } __syncthreads(); }
+  if (blockSize >= 256) { if (tid < 128) { sdata[tid] = reduction = reduction + sdata[tid + 128]; } __syncthreads(); }
+  if (blockSize >= 128) { if (tid <  64) { sdata[tid] = reduction = reduction + sdata[tid +  64]; } __syncthreads(); }
 
   if (tid < 32) {
-    /* now that we are using warp-synchronous programming (below)
-       we need to declare our shared memory volatile so that the compiler
-       doesn't reorder stores to it and induce incorrect behavior. */
 
+    /* this is warp synchronous however need to ensure compiler does not reorder stores to smem */
     volatile T* smem = sdata;
 
-    if (blockSize >=  64) { smem[tid] = mySum = mySum + smem[tid + 32]; __syncthreads(); }
-    if (blockSize >=  32) { smem[tid] = mySum = mySum + smem[tid + 16]; __syncthreads(); }
-    if (blockSize >=  16) { smem[tid] = mySum = mySum + smem[tid +  8]; __syncthreads(); }
-    if (blockSize >=   8) { smem[tid] = mySum = mySum + smem[tid +  4]; __syncthreads(); }
-    if (blockSize >=   4) { smem[tid] = mySum = mySum + smem[tid +  2]; __syncthreads(); }
-    if (blockSize >=   2) { smem[tid] = mySum = mySum + smem[tid +  1]; __syncthreads(); }
+    if (blockSize >=  64) { smem[tid] = reduction = reduction + smem[tid + 32]; __syncthreads(); }
+    if (blockSize >=  32) { smem[tid] = reduction = reduction + smem[tid + 16]; __syncthreads(); }
+    if (blockSize >=  16) { smem[tid] = reduction = reduction + smem[tid +  8]; __syncthreads(); }
+    if (blockSize >=   8) { smem[tid] = reduction = reduction + smem[tid +  4]; __syncthreads(); }
+    if (blockSize >=   4) { smem[tid] = reduction = reduction + smem[tid +  2]; __syncthreads(); }
+    if (blockSize >=   2) { smem[tid] = reduction = reduction + smem[tid +  1]; __syncthreads(); }
   }
 
   // write result for this block to global mem
@@ -92,8 +88,9 @@ sum_reduce_kernel(T *g_idata, T *g_odata, unsigned int n) {
 }
 
 
-/* wrapper function for kernel launch */
-#define REDUCTION_KERNEL(O)                                                                                  \
+/* generate kernel launcher template for a given operator */
+
+#define REDUCTION_KERNEL_LAUNCHER(O)                                                                         \
                                                                                                              \
 template <class T>                                                                                           \
 void                                                                                                         \
@@ -155,17 +152,16 @@ O##_reduce(int size, int threads, int blocks, T *d_idata, T *d_odata) {         
   }                                                                                                          \
 }
 
-// reduction kernel for summation
-REDUCTION_KERNEL(sum)
-// generate the sum reduction function for float
-template void
-sum_reduce<float>(int size, int threads, int blocks, float* d_idata, float* d_odata);
+
+#define ARRAY_REDUCTION_KERNEL_LAUNCHER(OP, TYPE)                                                           \
+template void                                                                                               \
+OP##_reduce<TYPE>(int size, int threads, int blocks, TYPE* d_idata, TYPE* d_odata);
 
 
-#define ARRAY_REDUCE(OP)                                                                                    \
+#define ARRAY_REDUCE(OP, TYPE)                                                                              \
                                                                                                             \
-/* actual host function that does the job */                                                                \
-cudaError_t cudaml_a##OP(float* A, size_t size, float* res) {                                               \
+/* generate API function */                                                                                 \
+cudaError_t cudaml_a##OP(TYPE* A, size_t size, TYPE* res) {                                                 \
                                                                                                             \
   /* calculate block and grid sizes based on input job size */                                              \
   int threads = rk_threads(size);                                                                           \
@@ -175,7 +171,7 @@ cudaError_t cudaml_a##OP(float* A, size_t size, float* res) {                   
   trace("n: %d, threads: %d, blocks: %d\n", n, threads, blocks);                                            \
                                                                                                             \
   cudaError_t sts;                                                                                          \
-  float* C;                                                                                                 \
+  TYPE* C;                                                                                                  \
   /* allocate output data vector - which is number of blocks (since this is first pass reduction size) */   \
   if ((sts = cudaMalloc(&C, blocks * sizeof(float))) != cudaSuccess)                                        \
     return sts;                                                                                             \
@@ -195,7 +191,7 @@ cudaError_t cudaml_a##OP(float* A, size_t size, float* res) {                   
     int nt = rk_threads(s);                                                                                 \
     int nb = rk_blocks(s, nt);                                                                              \
                                                                                                             \
-    OP##_reduce<float>(s, nt, nb, C, C);                                                                    \
+    OP##_reduce<TYPE>(s, nt, nb, C, C);                                                                     \
     trace("reduced: %d\n", s);                                                                              \
     s = nb;                                                                                                 \
   }                                                                                                         \
@@ -203,11 +199,13 @@ cudaError_t cudaml_a##OP(float* A, size_t size, float* res) {                   
   trace("load result\n");                                                                                   \
                                                                                                             \
   /* C[0] should be our result - so we need to copy the data back to host */                                \
-  cudaMemcpy(res, C, sizeof(float), cudaMemcpyDeviceToHost);                                                \
+  cudaMemcpy(res, C, sizeof(TYPE), cudaMemcpyDeviceToHost);                                                 \
   trace("result: %f\n", *res);                                                                              \
   return cudaFree(C);                                                                                       \
 }
 
-/* define the library reduction routines - prototypes need to be declared in cudaml.h */
+/* generate actual code - API prototypes need to be declared in cudaml.h */
 
-ARRAY_REDUCE(sum)
+REDUCTION_KERNEL_LAUNCHER(sum)
+ARRAY_REDUCTION_KERNEL_LAUNCHER(sum, float)
+ARRAY_REDUCE(sum, float)
