@@ -32,59 +32,65 @@ struct SharedMemory {
     In other words if blockSize <= 32, allocate 64*sizeof(T) bytes.
     else if blockSize > 32, allocate blockSize*sizeof(T) bytes.
 */
-template <class T, unsigned int blockSize, bool nIsPow2>
-__global__ void
-sum_reduce_kernel(T *g_idata, T *g_odata, unsigned int n) {
 
-  T *sdata = SharedMemory<T>();
+#define BINARYOP(OP, X, Y)                        \
+  OP((X),(Y))
 
-  /* perform first level of reduction,
-     reading from global memory, writing to shared memory */
-
-  unsigned int tid = threadIdx.x;
-  unsigned int i = blockIdx.x*blockSize*2 + threadIdx.x;
-  unsigned int gridSize = blockSize*2*gridDim.x;
-
-  T reduction = 0;
-
-  /* we reduce multiple elements per thread.  The number is determined by the
-     number of active thread blocks (via gridDim).  More blocks will result
-     in a larger gridSize and therefore fewer elements per thread */
-
-  while (i < n) {
-    reduction += g_idata[i];
-    // ensure we don't read out of bounds -- this is optimized away for powerOf2 sized arrays
-    if (nIsPow2 || i + blockSize < n)
-        reduction += g_idata[i+blockSize];
-    i += gridSize;
-  }
-
-  // each thread puts its local sum into shared memory
-  sdata[tid] = reduction;
-  __syncthreads();
-
-
-  // do reduction in shared mem
-  if (blockSize >= 512) { if (tid < 256) { sdata[tid] = reduction = reduction + sdata[tid + 256]; } __syncthreads(); }
-  if (blockSize >= 256) { if (tid < 128) { sdata[tid] = reduction = reduction + sdata[tid + 128]; } __syncthreads(); }
-  if (blockSize >= 128) { if (tid <  64) { sdata[tid] = reduction = reduction + sdata[tid +  64]; } __syncthreads(); }
-
-  if (tid < 32) {
-
-    /* this is warp synchronous however need to ensure compiler does not reorder stores to smem */
-    volatile T* smem = sdata;
-
-    if (blockSize >=  64) { smem[tid] = reduction = reduction + smem[tid + 32]; __syncthreads(); }
-    if (blockSize >=  32) { smem[tid] = reduction = reduction + smem[tid + 16]; __syncthreads(); }
-    if (blockSize >=  16) { smem[tid] = reduction = reduction + smem[tid +  8]; __syncthreads(); }
-    if (blockSize >=   8) { smem[tid] = reduction = reduction + smem[tid +  4]; __syncthreads(); }
-    if (blockSize >=   4) { smem[tid] = reduction = reduction + smem[tid +  2]; __syncthreads(); }
-    if (blockSize >=   2) { smem[tid] = reduction = reduction + smem[tid +  1]; __syncthreads(); }
-  }
-
-  // write result for this block to global mem
-  if (tid == 0)
-    g_odata[blockIdx.x] = sdata[0];
+#define REDUCTION_KERNEL(NAME, BINOP)                                                                        \
+                                                                                                             \
+template <class T, unsigned int blockSize, bool nIsPow2>                                                     \
+__global__ void                                                                                              \
+NAME##_reduce_kernel(T *g_idata, T *g_odata, unsigned int n) {                                               \
+                                                                                                             \
+  T *sdata = SharedMemory<T>();                                                                              \
+                                                                                                             \
+  /* perform first level of reduction,                                                                       \
+     reading from global memory, writing to shared memory */                                                 \
+                                                                                                             \
+  unsigned int tid = threadIdx.x;                                                                            \
+  unsigned int i = blockIdx.x*blockSize*2 + threadIdx.x;                                                     \
+  unsigned int gridSize = blockSize*2*gridDim.x;                                                             \
+                                                                                                             \
+  T reduction = 0;                                                                                           \
+                                                                                                             \
+  /* we reduce multiple elements per thread.  The number is determined by the                                \
+     number of active thread blocks (via gridDim).  More blocks will result                                  \
+     in a larger gridSize and therefore fewer elements per thread */                                         \
+                                                                                                             \
+  while (i < n) {                                                                                            \
+    reduction = BINARYOP(BINOP, reduction, g_idata[i]);                                                      \
+    /* ensure we don't read out of bounds -- this is optimized away for powerOf2 sized arrays */             \
+    if (nIsPow2 || i + blockSize < n)                                                                        \
+      reduction = BINARYOP(BINOP, reduction, g_idata[i+blockSize]);                                          \
+    i += gridSize;                                                                                           \
+  }                                                                                                          \
+                                                                                                             \
+  /* each thread puts its local sum into shared memory */                                                    \
+  sdata[tid] = reduction;                                                                                    \
+  __syncthreads();                                                                                           \
+                                                                                                             \
+                                                                                                             \
+  /* do reduction in shared mem */                                                                           \
+  if (blockSize >= 512) { if (tid < 256) { sdata[tid] = reduction = BINARYOP(BINOP, reduction, sdata[tid + 256]); } __syncthreads(); } \
+  if (blockSize >= 256) { if (tid < 128) { sdata[tid] = reduction = BINARYOP(BINOP, reduction, sdata[tid + 128]); } __syncthreads(); } \
+  if (blockSize >= 128) { if (tid <  64) { sdata[tid] = reduction = BINARYOP(BINOP, reduction, sdata[tid +  64]); } __syncthreads(); } \
+                                                                                                             \
+  if (tid < 32) {                                                                                            \
+                                                                                                             \
+    /* this is warp synchronous however need to ensure compiler does not reorder stores to smem */           \
+    volatile T* smem = sdata;                                                                                \
+                                                                                                             \
+    if (blockSize >=  64) { smem[tid] = reduction = BINARYOP(BINOP, reduction, smem[tid + 32]); __syncthreads(); } \
+    if (blockSize >=  32) { smem[tid] = reduction = BINARYOP(BINOP, reduction, smem[tid + 16]); __syncthreads(); } \
+    if (blockSize >=  16) { smem[tid] = reduction = BINARYOP(BINOP, reduction, smem[tid +  8]); __syncthreads(); } \
+    if (blockSize >=   8) { smem[tid] = reduction = BINARYOP(BINOP, reduction, smem[tid +  4]); __syncthreads(); } \
+    if (blockSize >=   4) { smem[tid] = reduction = BINARYOP(BINOP, reduction, smem[tid +  2]); __syncthreads(); } \
+    if (blockSize >=   2) { smem[tid] = reduction = BINARYOP(BINOP, reduction, smem[tid +  1]); __syncthreads(); } \
+  }                                                                                                          \
+                                                                                                             \
+  /* write result for this block to global mem */                                                            \
+  if (tid == 0)                                                                                              \
+    g_odata[blockIdx.x] = sdata[0];                                                                          \
 }
 
 
@@ -204,8 +210,3 @@ cudaError_t cudaml_a##OP(TYPE* A, size_t size, TYPE* res) {                     
   return cudaFree(C);                                                                                       \
 }
 
-/* generate actual code - API prototypes need to be declared in cudaml.h */
-
-REDUCTION_KERNEL_LAUNCHER(sum)
-ARRAY_REDUCTION_KERNEL_LAUNCHER(sum, float)
-ARRAY_REDUCE(sum, float)

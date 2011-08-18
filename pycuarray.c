@@ -286,6 +286,12 @@ static PyMethodDef cuda_Array_methods[] = {
    "Centralised (zero sum) in each column of matrix/vector."},
   {"sum", (PyCFunction) cuda_Array_sum, METH_VARARGS,
    "Sum of matrix/vector."},
+  {"max", (PyCFunction) cuda_Array_max, METH_VARARGS,
+   "Maximum value of matrix/vector."},
+  {"min", (PyCFunction) cuda_Array_min, METH_VARARGS,
+   "Minimum value of matrix/vector."},
+  {"product", (PyCFunction) cuda_Array_product, METH_VARARGS,
+   "Product of matrix/vector."},
 #endif
 
   {NULL, NULL, 0, NULL} 
@@ -336,7 +342,7 @@ static PyTypeObject cuda_ArrayType = {
     0,                                        /*tp_setattro*/
     0,                                        /*tp_as_buffer*/
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
-    "CUDA device backed array",               /* tp_doc */
+    "CUDA device array",                      /* tp_doc */
     0,                                        /* tp_traverse */
     0,                                        /* tp_clear */
     0,                                        /* tp_richcompare */
@@ -968,6 +974,11 @@ cuda_Array_conjugateTranspose(cuda_Array* self) {
 static PyObject*
 cuda_Array_centralise(cuda_Array* self) {
 
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision reduction not yet implemented");
+    return NULL;
+  }
+
   if (cuda_error2(null(), "cuda_Array_centralise"))
     return NULL;
   else
@@ -980,12 +991,62 @@ cuda_Array_sum(cuda_Array* self) {
 
   float sum;
 
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision reduction not yet implemented");
+    return NULL;
+  }
+
   if (cuda_error2(cudaml_asum(self->d_mem->d_ptr, a_elements(self), &sum), "cuda_Array_sum"))
     return NULL;
   else
     return Py_BuildValue("f", sum);
 }
 
+static PyObject*
+cuda_Array_max(cuda_Array* self) {
+
+  float sum;
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision reduction not yet implemented");
+    return NULL;
+  }
+
+  if (cuda_error2(cudaml_amax(self->d_mem->d_ptr, a_elements(self), &sum), "cuda_Array_max"))
+    return NULL;
+  else
+    return Py_BuildValue("f", sum);
+}
+
+static PyObject*
+cuda_Array_min(cuda_Array* self) {
+
+  float sum;
+
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision reduction not yet implemented");
+    return NULL;
+  }
+
+  if (cuda_error2(cudaml_amin(self->d_mem->d_ptr, a_elements(self), &sum), "cuda_Array_min"))
+    return NULL;
+  else
+    return Py_BuildValue("f", sum);
+}
+
+static PyObject*
+cuda_Array_product(cuda_Array* self) {
+
+  float sum;
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision reduction not yet implemented");
+    return NULL;
+  }
+
+  if (cuda_error2(cudaml_aproduct(self->d_mem->d_ptr, a_elements(self), &sum), "cuda_Array_product"))
+    return NULL;
+  else
+    return Py_BuildValue("f", sum);
+}
 #endif // CUDAML
 
 /***************************************************************************

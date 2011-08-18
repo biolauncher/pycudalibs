@@ -30,10 +30,44 @@ class TestML (unittest.TestCase):
         self.assert_(test.scalars_equal(sn, s, 1E-04))
 
 
+    def test_real_single_matrix_max(self):
+        A_ = cn.array(self.real_mata, dtype=cn.float32)
+        A = np.array(self.real_mata, dtype=np.float32)
+        # gpu
+        s = A_.max()
+        # cpu
+        sn = np.max(A)
+        # XXX this precision doesn't always return true
+        self.assert_(test.scalars_equal(sn, s, 1E-04))
+
+    def test_real_single_matrix_min(self):
+        A_ = cn.array(self.real_mata, dtype=cn.float32)
+        A = np.array(self.real_mata, dtype=np.float32)
+        # gpu
+        s = A_.min()
+        # cpu
+        sn = np.min(A)
+        # XXX this precision doesn't always return true
+        self.assert_(test.scalars_equal(sn, s, 1E-04))
+
+    def test_real_single_matrix_product(self):
+        A_ = cn.array(self.real_mata, dtype=cn.float32)
+        A = np.array(self.real_mata, dtype=np.float32)
+        # gpu
+        s = A_.product()
+        # cpu
+        sn = np.product(A)
+        # XXX this precision doesn't always return true
+        self.assert_(test.scalars_equal(sn, s, 1E-04))
+
+        
 def suite_single():
     suite = unittest.TestSuite()
     tests = [
-        'test_real_single_matrix_sum'
+        'test_real_single_matrix_sum',
+        'test_real_single_matrix_max',
+        'test_real_single_matrix_min',
+        'test_real_single_matrix_product'
         ]
     
     return unittest.TestSuite(map(TestML, tests))
