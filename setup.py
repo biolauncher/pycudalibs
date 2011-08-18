@@ -72,9 +72,13 @@ else:
 # cudaml custom kernel integration
 CUDAML_LIB = ''
 cudaml = './cudaml'
-cudaml_include = cudaml
-cudaml_lib = cudaml
+cudaml_include = cudaml + "/include"
 
+if dsys.get_config_var("SIZEOF_LONG") == 8 and os.path.exists(cuda_lib64):
+    cudaml_lib = cudaml + '/lib64'
+else:
+    cudaml_lib = cudaml + '/lib'
+    
 if os.path.exists(cudaml):
     library_dirs += [cudaml_lib]
     includes += [cudaml_include]
