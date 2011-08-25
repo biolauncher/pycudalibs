@@ -292,6 +292,15 @@ static PyMethodDef cuda_Array_methods[] = {
    "Minimum value of matrix/vector."},
   {"product", (PyCFunction) cuda_Array_product, METH_VARARGS,
    "Product of matrix/vector."},
+  {"csum", (PyCFunction) cuda_Array_csum, METH_VARARGS,
+   "Column sum of matrix/vector."},
+  {"cmax", (PyCFunction) cuda_Array_cmax, METH_VARARGS,
+   "Column max of matrix/vector."},
+  {"cmin", (PyCFunction) cuda_Array_cmin, METH_VARARGS,
+   "Column min of matrix/vector."},
+  {"cproduct", (PyCFunction) cuda_Array_cproduct, METH_VARARGS,
+   "Column product of matrix/vector."},
+ 
 #endif
 
   {NULL, NULL, 0, NULL} 
@@ -1047,6 +1056,87 @@ cuda_Array_product(cuda_Array* self) {
   else
     return Py_BuildValue("f", sum);
 }
+
+static PyObject*
+cuda_Array_csum(cuda_Array* self) {
+
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision reduction not yet implemented");
+    return NULL;
+  }
+
+  int m = self->a_dims[0];
+  int n = self->a_dims[1];
+
+  // allocate a new vector for the result
+  cuda_Array* colv = make_vector(n, self->a_dtype);
+
+  if (cuda_error2(cudaml_csum(self->d_mem->d_ptr, m, n, colv->d_mem->d_ptr), "cuda_Array_csum"))
+    return NULL;
+  else
+    return Py_BuildValue("O", colv);
+}
+
+static PyObject*
+cuda_Array_cmax(cuda_Array* self) {
+
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision reduction not yet implemented");
+    return NULL;
+  }
+
+  int m = self->a_dims[0];
+  int n = self->a_dims[1];
+
+  // allocate a new vector for the result
+  cuda_Array* colv = make_vector(n, self->a_dtype);
+
+  if (cuda_error2(cudaml_cmax(self->d_mem->d_ptr, m, n, colv->d_mem->d_ptr), "cuda_Array_cmax"))
+    return NULL;
+  else
+    return Py_BuildValue("O", colv);
+}
+
+static PyObject*
+cuda_Array_cmin(cuda_Array* self) {
+
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision reduction not yet implemented");
+    return NULL;
+  }
+
+  int m = self->a_dims[0];
+  int n = self->a_dims[1];
+
+  // allocate a new vector for the result
+  cuda_Array* colv = make_vector(n, self->a_dtype);
+
+  if (cuda_error2(cudaml_cmin(self->d_mem->d_ptr, m, n, colv->d_mem->d_ptr), "cuda_Array_cmin"))
+    return NULL;
+  else
+    return Py_BuildValue("O", colv);
+}
+
+static PyObject*
+cuda_Array_cproduct(cuda_Array* self) {
+
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision reduction not yet implemented");
+    return NULL;
+  }
+
+  int m = self->a_dims[0];
+  int n = self->a_dims[1];
+
+  // allocate a new vector for the result
+  cuda_Array* colv = make_vector(n, self->a_dtype);
+
+  if (cuda_error2(cudaml_cproduct(self->d_mem->d_ptr, m, n, colv->d_mem->d_ptr), "cuda_Array_cproduct"))
+    return NULL;
+  else
+    return Py_BuildValue("O", colv);
+}
+
 #endif // CUDAML
 
 /***************************************************************************

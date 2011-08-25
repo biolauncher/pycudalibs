@@ -117,11 +117,15 @@ static PyObject* cuda_Array_eigensystem(cuda_Array*, PyObject*, PyObject*);
 static PyObject* cuda_Array_conjugateTranspose(cuda_Array*);
 #endif // CULA
 #ifdef CUDAML
-static PyObject* cuda_Array_centralise(cuda_Array*);
 static PyObject* cuda_Array_sum(cuda_Array*);
 static PyObject* cuda_Array_max(cuda_Array*);
 static PyObject* cuda_Array_min(cuda_Array*);
 static PyObject* cuda_Array_product(cuda_Array*);
+static PyObject* cuda_Array_csum(cuda_Array*);
+static PyObject* cuda_Array_cmax(cuda_Array*);
+static PyObject* cuda_Array_cmin(cuda_Array*);
+static PyObject* cuda_Array_cproduct(cuda_Array*);
+static PyObject* cuda_Array_centralise(cuda_Array*);
 #endif // CUDAML
 
 #endif

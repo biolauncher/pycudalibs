@@ -60,6 +60,53 @@ class TestML (unittest.TestCase):
         # XXX this precision doesn't always return true
         self.assert_(test.scalars_equal(sn, s, 1E-04))
 
+    def test_real_single_matrix_csum(self):
+        A_ = cn.array(self.real_mata, dtype=cn.float32)
+        A = np.array(self.real_mata, dtype=np.float32)
+        # gpu
+        s = A_.csum().toarray()
+        #print s
+        # cpu
+        sn = np.sum(A, axis=0)
+        #print sn
+        # XXX this precision doesn't always return true
+        self.assert_(test.arrays_equal(sn, s, 1E-03))
+
+    def test_real_single_matrix_cmax(self):
+        A_ = cn.array(self.real_mata, dtype=cn.float32)
+        A = np.array(self.real_mata, dtype=np.float32)
+        # gpu
+        s = A_.cmax().toarray()
+        #print s
+        # cpu
+        sn = np.max(A, axis=0)
+        #print sn
+        # XXX this precision doesn't always return true
+        self.assert_(test.arrays_equal(sn, s, 1E-03))
+
+    def test_real_single_matrix_cmin(self):
+        A_ = cn.array(self.real_mata, dtype=cn.float32)
+        A = np.array(self.real_mata, dtype=np.float32)
+        # gpu
+        s = A_.cmin().toarray()
+        #print s
+        # cpu
+        sn = np.min(A, axis=0)
+        #print sn
+        # XXX this precision doesn't always return true
+        self.assert_(test.arrays_equal(sn, s, 1E-03))
+
+    def test_real_single_matrix_cproduct(self):
+        A_ = cn.array(self.real_mata, dtype=cn.float32)
+        A = np.array(self.real_mata, dtype=np.float32)
+        # gpu
+        s = A_.cproduct().toarray()
+        #print s
+        # cpu
+        sn = np.product(A, axis=0)
+        #print sn
+        # XXX this precision doesn't always return true
+        self.assert_(test.arrays_equal(sn, s, 1E-03))
         
 def suite_single():
     suite = unittest.TestSuite()
@@ -67,7 +114,11 @@ def suite_single():
         'test_real_single_matrix_sum',
         'test_real_single_matrix_max',
         'test_real_single_matrix_min',
-        'test_real_single_matrix_product'
+        'test_real_single_matrix_product',
+        'test_real_single_matrix_csum',
+        'test_real_single_matrix_cmax',
+        'test_real_single_matrix_cmin',
+        'test_real_single_matrix_cproduct'
         ]
     
     return unittest.TestSuite(map(TestML, tests))

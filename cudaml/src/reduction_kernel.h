@@ -94,7 +94,7 @@ NAME##_reduce_kernel(T *g_idata, T *g_odata, unsigned int n) {                  
 }
 
 
-/* generate kernel launcher template for a given operator */
+/* define kernel launcher template for a given operator */
 
 #define REDUCTION_KERNEL_LAUNCHER(O)                                                                         \
                                                                                                              \
@@ -166,7 +166,7 @@ OP##_reduce<TYPE>(int size, int threads, int blocks, TYPE* d_idata, TYPE* d_odat
 
 #define ARRAY_REDUCE(OP, TYPE)                                                                              \
                                                                                                             \
-/* generate API function */                                                                                 \
+/* API function */                                                                                          \
 cudaError_t cudaml_a##OP(TYPE* A, size_t size, TYPE* res) {                                                 \
                                                                                                             \
   /* calculate block and grid sizes based on input job size */                                              \
@@ -174,18 +174,18 @@ cudaError_t cudaml_a##OP(TYPE* A, size_t size, TYPE* res) {                     
   int blocks = rk_blocks(size, threads);                                                                    \
   int n = (int) size;                                                                                       \
                                                                                                             \
-  trace("n: %d, threads: %d, blocks: %d\n", n, threads, blocks);                                            \
+  trace("cudaml_a## n: [%d], threads: %d, blocks: %d\n", n, threads, blocks);                               \
                                                                                                             \
   cudaError_t sts;                                                                                          \
   TYPE* C;                                                                                                  \
   /* allocate output data vector - which is number of blocks (since this is first pass reduction size) */   \
-  if ((sts = cudaMalloc(&C, blocks * sizeof(float))) != cudaSuccess)                                        \
+  if ((sts = cudaMalloc(&C, blocks * sizeof(TYPE))) != cudaSuccess)                                         \
     return sts;                                                                                             \
                                                                                                             \
   /* fire up the kernel to compute the reduction on GPU */                                                  \
-  OP##_reduce<float>(n, threads, blocks, A, C);                                                             \
+  OP##_reduce<TYPE>(n, threads, blocks, A, C);                                                              \
                                                                                                             \
-  trace("reduced: %d\n", blocks);                                                                           \
+  trace("cudaml_a##_reduct1: %d\n", blocks);                                                                \
                                                                                                             \
   /* C should contain "blocks" partial sums so we reduce iteratively again in place                         \
      and sum partial block sums on GPU  - this might be inefficient for short vectors                       \
@@ -198,15 +198,57 @@ cudaError_t cudaml_a##OP(TYPE* A, size_t size, TYPE* res) {                     
     int nb = rk_blocks(s, nt);                                                                              \
                                                                                                             \
     OP##_reduce<TYPE>(s, nt, nb, C, C);                                                                     \
-    trace("reduced: %d\n", s);                                                                              \
+    trace("cudaml_a##_reduct+: %d\n", s);                                                                   \
     s = nb;                                                                                                 \
   }                                                                                                         \
                                                                                                             \
-  trace("load result\n");                                                                                   \
-                                                                                                            \
   /* C[0] should be our result - so we need to copy the data back to host */                                \
   cudaMemcpy(res, C, sizeof(TYPE), cudaMemcpyDeviceToHost);                                                 \
-  trace("result: %f\n", *res);                                                                              \
   return cudaFree(C);                                                                                       \
+}
+
+
+#define COLUMN_REDUCE(OP,TYPE)                                                                              \
+                                                                                                            \
+/* API template reduce m rows of T in to n columns a and r should be                                        \
+   device memory */                                                                                         \
+cudaError_t cudaml_c##OP(TYPE* a, size_t m, size_t n, TYPE* r) {                                            \
+                                                                                                            \
+  /* per column/dimension reduction - we invoke kernel n times with m rows */                               \
+  int threads = rk_threads(m);                                                                              \
+  int blocks = rk_blocks(m, threads);                                                                       \
+                                                                                                            \
+  trace("cudaml_c##: [%d,%d], threads: %d, blocks: %d\n", (int) m, (int) n, threads, blocks); \
+                                                                                                            \
+  float* c;                                                                                                 \
+  cudaError_t sts;                                                                                          \
+                                                                                                            \
+  /* allocate enough device memory for a block reduction */                                                 \
+  if ((sts = cudaMalloc(&c, blocks * sizeof(TYPE))) != cudaSuccess)                                         \
+    return sts;                                                                                             \
+                                                                                                            \
+  for (int j=0; j<n; j++) {                                                                                 \
+                                                                                                            \
+    float* A = a+m*j;                                                                                       \
+                                                                                                            \
+    OP##_reduce<TYPE>(m, threads, blocks, A, c);                                                            \
+                                                                                                            \
+    trace("cudaml_c##_reduct1: %d\n", blocks);                                                              \
+                                                                                                            \
+    int s = blocks;                                                                                         \
+                                                                                                            \
+    while (s > 1) {                                                                                         \
+      int nt = rk_threads(s);                                                                               \
+      int nb = rk_blocks(s, nt);                                                                            \
+                                                                                                            \
+      OP##_reduce<TYPE>(s, nt, nb, c, c);                                                                   \
+      trace("cudaml_c##_reduct+: %d\n", s);                                                                 \
+      s = nb;                                                                                               \
+    }                                                                                                       \
+                                                                                                            \
+    cudaMemcpy(r+j, c, sizeof(float), cudaMemcpyDeviceToDevice);                                            \
+  }                                                                                                         \
+  cudaFree(c);                                                                                              \
+  return cudaGetLastError();                                                                                \
 }
 

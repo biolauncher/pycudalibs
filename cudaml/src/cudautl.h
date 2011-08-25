@@ -4,6 +4,9 @@
 #ifndef __CUDAUTL_H__
 #define __CUDAUTL_H__ 1
 
+
+#define F2DI(m, i, j) (((m)*(i))+(j)) 
+
 static inline int nextPow2(unsigned int x) {
   --x;
   x |= x >> 1;
@@ -29,6 +32,15 @@ static inline int rk_threads(int n) {
 static inline int rk_blocks(int n, int threads) {
   return min(MAX_BLOCKS, (n + (threads * 2 - 1)) / (threads * 2));
 }
+
+static inline int mk_threads(int n) {
+  return rk_threads(n);
+}
+
+static inline int mk_blocks(int n, int threads) {
+  return (n + (threads * 2 - 1)) / (threads * 2); 
+}
+
 
 #if DEBUG > 0
 #warning "tracing calls will be compiled"

@@ -13,12 +13,19 @@ extern "C" {
   // Library functions
   cudaError_t null(void);
   cudaError_t simple(void*, size_t);
-  // Real functions here
-  cudaError_t cudaml_centraliser(void*, void*, size_t, size_t);
+  // device memory functions with host scalar reduction
   cudaError_t cudaml_asum(float*, size_t, float*);
   cudaError_t cudaml_amax(float*, size_t, float*);
   cudaError_t cudaml_amin(float*, size_t, float*);
   cudaError_t cudaml_aproduct(float*, size_t, float*);
+  // device memory functions with device vector reduction
+  cudaError_t cudaml_csum(float*, size_t, size_t, float*);
+  cudaError_t cudaml_cmax(float*, size_t, size_t, float*);
+  cudaError_t cudaml_cmin(float*, size_t, size_t, float*);
+  cudaError_t cudaml_cproduct(float*, size_t, size_t, float*);
+  // device memoery functions with device matrix result
+  cudaError_t cudaml_centraliser(void*, void*, size_t, size_t);
+
 #ifdef __cplusplus
 }
 #endif

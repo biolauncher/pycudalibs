@@ -25,3 +25,9 @@ ARRAY_REDUCE(sum, float)
 ARRAY_REDUCE(max, float)
 ARRAY_REDUCE(min, float)
 ARRAY_REDUCE(product, float)
+
+/* column reduction api */
+COLUMN_REDUCE(sum, float)
+COLUMN_REDUCE(max, float)
+COLUMN_REDUCE(min, float)
+COLUMN_REDUCE(product, float)
