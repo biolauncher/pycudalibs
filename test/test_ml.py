@@ -107,7 +107,20 @@ class TestML (unittest.TestCase):
         #print sn
         # XXX this precision doesn't always return true
         self.assert_(test.arrays_equal(sn, s, 1E-03))
-        
+
+    def test_real_single_matrix_add(self):
+        A_ = cn.array(self.real_mata, dtype=cn.float32)
+        A = np.array(self.real_mata, dtype=np.float32)
+        S = 27.345
+        # gpu
+        s = A_.add(S)
+        #print s
+        # cpu
+        sn = A + S
+        #print sn
+        # XXX this precision doesn't always return true
+        self.assert_(test.arrays_equal(sn, s.toarray(), 1E-03))
+
 def suite_single():
     suite = unittest.TestSuite()
     tests = [
@@ -118,7 +131,9 @@ def suite_single():
         'test_real_single_matrix_csum',
         'test_real_single_matrix_cmax',
         'test_real_single_matrix_cmin',
-        'test_real_single_matrix_cproduct'
+        'test_real_single_matrix_cproduct',
+        'test_real_single_matrix_add'
+        
         ]
     
     return unittest.TestSuite(map(TestML, tests))

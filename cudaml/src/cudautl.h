@@ -41,6 +41,9 @@ static inline int mk_blocks(int n, int threads) {
   return (n + (threads * 2 - 1)) / (threads * 2); 
 }
 
+#define BINARYOP(OP, X, Y)                        \
+  OP((X),(Y))
+
 
 #if DEBUG > 0
 #warning "tracing calls will be compiled"

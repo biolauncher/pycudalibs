@@ -23,7 +23,12 @@ extern "C" {
   cudaError_t cudaml_cmax(float*, size_t, size_t, float*);
   cudaError_t cudaml_cmin(float*, size_t, size_t, float*);
   cudaError_t cudaml_cproduct(float*, size_t, size_t, float*);
-  // device memoery functions with device matrix result
+  // device memory functions withelement wise operations
+  cudaError_t cudaml_esum(float*, size_t, float, float*);
+  cudaError_t cudaml_evsum(float*, size_t, float*, size_t, float*);
+  cudaError_t cudaml_emul(float*, size_t, float, float*);
+  cudaError_t cudaml_evmul(float*, size_t, float*, size_t, float*);
+  // device memory functions with device matrix result
   cudaError_t cudaml_centraliser(void*, void*, size_t, size_t);
 
 #ifdef __cplusplus

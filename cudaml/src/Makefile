@@ -29,8 +29,8 @@ LIBDIR64 	= ../lib64
 LIB32 		= $(LIBDIR32)/lib$(LIBNAME).$(LIBEXT)
 LIB64 		= $(LIBDIR64)/lib$(LIBNAME).$(LIBEXT)
 
-KERNELS 	= null.cu simple.cu centraliser.cu reduction.cu
-HEADERS 	= $(INCLUDEDIR)/cudaml.h cudautl.h reduction_kernel.h
+KERNELS 	= null.cu simple.cu centraliser.cu reduction.cu element.cu
+HEADERS 	= $(INCLUDEDIR)/cudaml.h cudautl.h reduction_kernel.h element_kernel.h
 
 all:	lib32 lib64
 

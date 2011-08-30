@@ -33,8 +33,6 @@ struct SharedMemory {
     else if blockSize > 32, allocate blockSize*sizeof(T) bytes.
 */
 
-#define BINARYOP(OP, X, Y)                        \
-  OP((X),(Y))
 
 #define REDUCTION_KERNEL(NAME, BINOP)                                                                        \
                                                                                                              \

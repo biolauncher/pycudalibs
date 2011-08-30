@@ -125,6 +125,8 @@ static PyObject* cuda_Array_csum(cuda_Array*);
 static PyObject* cuda_Array_cmax(cuda_Array*);
 static PyObject* cuda_Array_cmin(cuda_Array*);
 static PyObject* cuda_Array_cproduct(cuda_Array*);
+static PyObject* cuda_Array_esum(cuda_Array*, PyObject*);
+static PyObject* cuda_Array_emul(cuda_Array*, PyObject*);
 static PyObject* cuda_Array_centralise(cuda_Array*);
 #endif // CUDAML
 

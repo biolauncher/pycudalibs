@@ -300,7 +300,11 @@ static PyMethodDef cuda_Array_methods[] = {
    "Column min of matrix/vector."},
   {"cproduct", (PyCFunction) cuda_Array_cproduct, METH_VARARGS,
    "Column product of matrix/vector."},
- 
+  {"add", (PyCFunction) cuda_Array_esum, METH_VARARGS,
+   "Element by element add matrix/vector."},
+  {"mul", (PyCFunction) cuda_Array_emul, METH_VARARGS,
+   "Element by element multiply matrix/vector."},
+  
 #endif
 
   {NULL, NULL, 0, NULL} 
@@ -701,30 +705,6 @@ cuda_Array_reshape(cuda_Array *self, PyObject *args) {
   } else return NULL;
 }
 
-/**
- * sum of an array - the only way to do this in blas is with dot and a vector of ones!
- * -- no way I'm doing that b/s - this now under review - maybe LAPACK can help!
-   
-static PyObject*
-cuda_Array_sum(cuda_Array *self) {
-
-  if (isdouble(self)) {
-    PyErr_SetString(PyExc_NotImplementedError, "double precision linear algebra not yet implemented");
-    return NULL;
-
-  } else if (iscomplex(self)) {
-    
-    float sum = cublasScasum(a_elements(self), self->d_mem->d_ptr, 1);
-    return cublas_error("scasum") ? NULL : Py_BuildValue("f", sum);
-
-  } else {
-    cuda_Array* ones = make_vector(a_elements(self), self->a_dtype);
- 
-    float sum = cublasSdot(a_elements(self), self->d_mem->d_ptr, 1, );
-    return cublas_error("sasum") ? NULL : Py_BuildValue("f", sum);
-  }
-}
-*/ 
 
 /**
  * a method to create a copy of an array in cuda space
@@ -1135,6 +1115,154 @@ cuda_Array_cproduct(cuda_Array* self) {
     return NULL;
   else
     return Py_BuildValue("O", colv);
+}
+
+static PyObject*
+cuda_Array_esum(cuda_Array *self, PyObject *args) {
+  PyObject *arg;
+
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision linear algebra not yet implemented");
+    return NULL;
+
+  } else if (PyArg_ParseTuple(args, "O", &arg)) {
+
+    // no nasty side effects here - copy is cheap (device side anyway)
+    cuda_Array *copy = copy_array(self);
+
+    if (PyNumber_Check(arg)) {
+      
+      if (PyComplex_Check(arg)) {
+
+        // dont do complex element wise yet
+        PyErr_SetString(PyExc_ValueError, "complex scalars not yet implemented");
+        return NULL;
+        
+        /*
+        if (iscomplex(copy)) {
+
+          Py_complex z_scalar = PyComplex_AsCComplex(scalar);
+          cuComplex c_scalar;
+          c_scalar.x = (float) z_scalar.real;
+          c_scalar.y = (float) z_scalar.imag;
+          
+        }
+        */
+
+      } else {
+        // real scalar
+        float s = (float) PyFloat_AsDouble(arg);
+
+        if (iscomplex(copy)) {
+          PyErr_SetString(PyExc_ValueError, "complex arrays not yet implemented");
+          return NULL;
+          
+        } else {
+
+          return cuda_error2(cudaml_esum(self->d_mem->d_ptr, a_elements(self), s, copy->d_mem->d_ptr), 
+                             "cuda_Array_esum") ? NULL : Py_BuildValue("O", copy);
+        }
+      }
+
+    } else {
+
+      // argument could be an another array...
+      cuda_Array* other;
+
+      if (PyArg_ParseTuple(args, "O!", &cuda_ArrayType, &other)) {
+    
+        // types match?
+        if (!PyArray_EquivTypes(self->a_dtype, other->a_dtype)) {
+          PyErr_SetString(PyExc_ValueError, "array types are not equivalent");
+          return NULL;
+        }
+   
+        return cuda_error2(cudaml_evsum(self->d_mem->d_ptr, a_elements(self), 
+                                        other->d_mem->d_ptr, a_elements(other),
+                                        copy->d_mem->d_ptr), 
+                           "cuda_Array_evsum") ? NULL : Py_BuildValue("O", copy);
+      
+      } else {
+        PyErr_SetString(PyExc_ValueError, "argument type not applicable to this array");
+        return NULL;
+      }
+    }
+    
+  } else return NULL;
+}
+
+static PyObject*
+cuda_Array_emul(cuda_Array *self, PyObject *args) {
+  PyObject *arg;
+
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision linear algebra not yet implemented");
+    return NULL;
+
+  } else if (PyArg_ParseTuple(args, "O", &arg)) {
+
+    // no nasty side effects here - copy is cheap (device side anyway)
+    cuda_Array *copy = copy_array(self);
+
+    if (PyNumber_Check(arg)) {
+      
+      if (PyComplex_Check(arg)) {
+
+        // dont do complex element wise yet
+        PyErr_SetString(PyExc_ValueError, "complex scalars not yet implemented");
+        return NULL;
+        
+        /*
+        if (iscomplex(copy)) {
+
+          Py_complex z_scalar = PyComplex_AsCComplex(scalar);
+          cuComplex c_scalar;
+          c_scalar.x = (float) z_scalar.real;
+          c_scalar.y = (float) z_scalar.imag;
+          
+        }
+        */
+
+      } else {
+        // real scalar
+        float s = (float) PyFloat_AsDouble(arg);
+
+        if (iscomplex(copy)) {
+          PyErr_SetString(PyExc_ValueError, "complex arrays not yet implemented");
+          return NULL;
+          
+        } else {
+
+          return cuda_error2(cudaml_emul(self->d_mem->d_ptr, a_elements(self), s, copy->d_mem->d_ptr), 
+                             "cuda_Array_emul") ? NULL : Py_BuildValue("O", copy);
+        }
+      }
+
+    } else {
+
+      // argument could be an another array...
+      cuda_Array* other;
+
+      if (PyArg_ParseTuple(args, "O!", &cuda_ArrayType, &other)) {
+    
+        // types match?
+        if (!PyArray_EquivTypes(self->a_dtype, other->a_dtype)) {
+          PyErr_SetString(PyExc_ValueError, "array types are not equivalent");
+          return NULL;
+        }
+   
+        return cuda_error2(cudaml_evmul(self->d_mem->d_ptr, a_elements(self), 
+                                        other->d_mem->d_ptr, a_elements(other),
+                                        copy->d_mem->d_ptr), 
+                           "cuda_Array_evmul") ? NULL : Py_BuildValue("O", copy);
+      
+      } else {
+        PyErr_SetString(PyExc_ValueError, "argument type not applicable to this array");
+        return NULL;
+      }
+    }
+    
+  } else return NULL;
 }
 
 #endif // CUDAML
