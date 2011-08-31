@@ -107,6 +107,11 @@ static inline PyArray_Descr* dtype(int);
 static inline void* copy_devmem(cuda_Array*);
 static inline void* copy_devmem2d(cuda_Array*);
 
+#define UNARY_FUNCTION_PROTOTYPE(FUNC) static PyObject* cuda_Array_##FUNC(cuda_Array *);
+
+#define UNARY_FUNCTION_METHOD_TABLE_ENTRY(FUNC) \
+  {#FUNC, (PyCFunction) cuda_Array_##FUNC, METH_NOARGS, "elementwise " #FUNC " of an array"}
+
 // declare all cuda_Array methods here 
 static PyObject* cuda_Array_dot(cuda_Array*, PyObject*);
 static PyObject* cuda_Array_transpose(cuda_Array*, PyObject*);
@@ -115,22 +120,66 @@ static PyObject* cuda_Array_copy(cuda_Array*);
 static PyObject* cuda_Array_2norm(cuda_Array*);
 static PyObject* cuda_Array_asum(cuda_Array*);
 static PyObject* cuda_Array_reshape(cuda_Array*, PyObject*);
+
 #ifdef CULA // LAPACK
 static PyObject* cuda_Array_svd(cuda_Array*, PyObject*, PyObject*);
 static PyObject* cuda_Array_eigensystem(cuda_Array*, PyObject*, PyObject*);
 static PyObject* cuda_Array_conjugateTranspose(cuda_Array*);
 #endif // CULA
+
 #ifdef CUDAML
 static PyObject* cuda_Array_sum(cuda_Array*);
 static PyObject* cuda_Array_max(cuda_Array*);
 static PyObject* cuda_Array_min(cuda_Array*);
 static PyObject* cuda_Array_product(cuda_Array*);
+
 static PyObject* cuda_Array_csum(cuda_Array*);
 static PyObject* cuda_Array_cmax(cuda_Array*);
 static PyObject* cuda_Array_cmin(cuda_Array*);
 static PyObject* cuda_Array_cproduct(cuda_Array*);
+
 static PyObject* cuda_Array_esum(cuda_Array*, PyObject*);
 static PyObject* cuda_Array_emul(cuda_Array*, PyObject*);
+static PyObject* cuda_Array_epow(cuda_Array*, PyObject*);
+
+UNARY_FUNCTION_PROTOTYPE(sqrt)
+UNARY_FUNCTION_PROTOTYPE(log)
+UNARY_FUNCTION_PROTOTYPE(log2)
+UNARY_FUNCTION_PROTOTYPE(log10)
+
+UNARY_FUNCTION_PROTOTYPE(sin)
+UNARY_FUNCTION_PROTOTYPE(cos)
+UNARY_FUNCTION_PROTOTYPE(tan)
+
+UNARY_FUNCTION_PROTOTYPE(sinh)
+UNARY_FUNCTION_PROTOTYPE(cosh)
+UNARY_FUNCTION_PROTOTYPE(tanh)
+
+UNARY_FUNCTION_PROTOTYPE(exp)
+UNARY_FUNCTION_PROTOTYPE(exp10)
+
+UNARY_FUNCTION_PROTOTYPE(sinpi)
+UNARY_FUNCTION_PROTOTYPE(cospi)
+
+UNARY_FUNCTION_PROTOTYPE(asin)
+UNARY_FUNCTION_PROTOTYPE(acos)
+UNARY_FUNCTION_PROTOTYPE(atan)
+UNARY_FUNCTION_PROTOTYPE(asinh)
+UNARY_FUNCTION_PROTOTYPE(acosh)
+UNARY_FUNCTION_PROTOTYPE(atanh)
+
+UNARY_FUNCTION_PROTOTYPE(erf)
+UNARY_FUNCTION_PROTOTYPE(erfc)
+UNARY_FUNCTION_PROTOTYPE(erfinv)
+UNARY_FUNCTION_PROTOTYPE(erfcinv)
+UNARY_FUNCTION_PROTOTYPE(lgamma)
+UNARY_FUNCTION_PROTOTYPE(tgamma)
+
+UNARY_FUNCTION_PROTOTYPE(trunc)
+UNARY_FUNCTION_PROTOTYPE(round)
+UNARY_FUNCTION_PROTOTYPE(rint)
+UNARY_FUNCTION_PROTOTYPE(floor)
+UNARY_FUNCTION_PROTOTYPE(ceil)
 
 #endif // CUDAML
 

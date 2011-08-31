@@ -41,8 +41,11 @@ static inline int mk_blocks(int n, int threads) {
   return (n + (threads * 2 - 1)) / (threads * 2); 
 }
 
-#define BINARYOP(OP, X, Y)                        \
-  OP((X),(Y))
+#define THREADS_PER_BLOCK 256
+
+#define BINARYOP(OP, X, Y) OP((X),(Y))
+
+#define UNARYOP(OP, X) OP((X))
 
 
 #if DEBUG > 0
@@ -54,7 +57,7 @@ static inline int mk_blocks(int n, int threads) {
 #endif
 
 #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
-#warning "printf calls from device are not supported"
+#warning "printf calls from CUDA device are not supported"
 #define printf(f, ...) ((void)(f, __VA_ARGS__),0)
 #endif
 

@@ -279,6 +279,7 @@ static PyMethodDef cuda_Array_methods[] = {
    "Compute eigenvalues and optionally left and/or right eigenvectors of a square matrix."},
   {"adjoint", (PyCFunction) cuda_Array_conjugateTranspose, METH_NOARGS,
    "Conjugate transpose of a matrix"},
+
 #endif
 
 #ifdef CUDAML
@@ -291,6 +292,7 @@ static PyMethodDef cuda_Array_methods[] = {
    "Minimum value of matrix/vector."},
   {"product", (PyCFunction) cuda_Array_product, METH_NOARGS,
    "Product of matrix/vector."},
+
   {"csum", (PyCFunction) cuda_Array_csum, METH_NOARGS,
    "Column sum of matrix/vector."},
   {"cmax", (PyCFunction) cuda_Array_cmax, METH_NOARGS,
@@ -299,11 +301,52 @@ static PyMethodDef cuda_Array_methods[] = {
    "Column min of matrix/vector."},
   {"cproduct", (PyCFunction) cuda_Array_cproduct, METH_NOARGS,
    "Column product of matrix/vector."},
+
   {"add", (PyCFunction) cuda_Array_esum, METH_VARARGS,
    "Element by element add matrix/vector."},
   {"mul", (PyCFunction) cuda_Array_emul, METH_VARARGS,
    "Element by element multiply matrix/vector."},
+  {"pow", (PyCFunction) cuda_Array_epow, METH_VARARGS,
+   "Element by element matrix/vector power."},
+
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(sqrt),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(log),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(log2),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(log10),
   
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(sin),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(cos),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(tan),
+  
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(sinh),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(cosh),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(tanh),
+  
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(exp),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(exp10),
+  
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(sinpi),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(cospi),
+  
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(asin),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(acos),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(atan),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(asinh),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(acosh),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(atanh),
+
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(erf),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(erfc),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(erfinv),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(erfcinv),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(lgamma),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(tgamma),
+
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(trunc),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(round),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(rint),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(floor),
+  UNARY_FUNCTION_METHOD_TABLE_ENTRY(ceil),
 #endif
 
   {NULL, NULL, 0, NULL} 
@@ -1273,6 +1316,147 @@ cuda_Array_emul(cuda_Array *self, PyObject *args) {
     
   } else return NULL;
 }
+
+static PyObject*
+cuda_Array_epow(cuda_Array *self, PyObject *args) {
+  PyObject *arg;
+
+  if (isdouble(self)) {
+    PyErr_SetString(PyExc_NotImplementedError, "double precision linear algebra not yet implemented");
+    return NULL;
+
+  } else if (PyArg_ParseTuple(args, "O", &arg)) {
+
+    // no nasty side effects here - copy is cheap (device side anyway)
+    cuda_Array *copy = copy_array(self);
+
+    if (PyNumber_Check(arg)) {
+      
+      if (PyComplex_Check(arg)) {
+
+        // dont do complex element wise yet
+        PyErr_SetString(PyExc_ValueError, "complex scalars not yet implemented");
+        return NULL;
+        
+        /*
+        if (iscomplex(copy)) {
+
+          Py_complex z_scalar = PyComplex_AsCComplex(scalar);
+          cuComplex c_scalar;
+          c_scalar.x = (float) z_scalar.real;
+          c_scalar.y = (float) z_scalar.imag;
+          
+        }
+        */
+
+      } else {
+        // real scalar
+        float s = (float) PyFloat_AsDouble(arg);
+
+        if (iscomplex(copy)) {
+          PyErr_SetString(PyExc_ValueError, "complex arrays not yet implemented");
+          return NULL;
+          
+        } else {
+
+          return cuda_error2(cudaml_epow(self->d_mem->d_ptr, a_elements(self), s, copy->d_mem->d_ptr), 
+                             "cuda_Array_epow") ? NULL : Py_BuildValue("O", copy);
+        }
+      }
+
+    } else {
+
+      // argument could be an another array...
+      cuda_Array* other;
+
+      if (PyArg_ParseTuple(args, "O!", &cuda_ArrayType, &other)) {
+    
+        // types match?
+        if (!PyArray_EquivTypes(self->a_dtype, other->a_dtype)) {
+          PyErr_SetString(PyExc_ValueError, "array types are not equivalent");
+          return NULL;
+        }
+
+        if (ismatrix(self) && self->a_dims[1] == other->a_dims[0]) {
+          /* broadcast to columns */
+          return cuda_error2(cudaml_eapow(self->d_mem->d_ptr, self->a_dims[0], self->a_dims[1], 
+                                          other->d_mem->d_ptr, other->a_dims[0],
+                                          copy->d_mem->d_ptr), 
+                             "cuda_Array_eapow") ? NULL : Py_BuildValue("O", copy);
+        
+   
+        } else { 
+          /* broadcast the vector to the array */
+          return cuda_error2(cudaml_evpow(self->d_mem->d_ptr, a_elements(self), 
+                                          other->d_mem->d_ptr, a_elements(other),
+                                          copy->d_mem->d_ptr), 
+                             "cuda_Array_evpow") ? NULL : Py_BuildValue("O", copy);
+        }
+   
+      } else {
+        PyErr_SetString(PyExc_ValueError, "argument type not applicable to this array");
+        return NULL;
+      }
+    }
+    
+  } else return NULL;
+}
+
+
+/* unary math methods */
+#define UNARY_FUNCTION_METHOD(FUNC)                                                                    \
+static PyObject*                                                                                       \
+cuda_Array_##FUNC(cuda_Array *self) {                                                                  \
+                                                                                                       \
+  if (isdouble(self)) {                                                                                \
+    PyErr_SetString(PyExc_NotImplementedError, "double precision linear algebra not yet implemented"); \
+    return NULL;                                                                                       \
+  }                                                                                                    \
+                                                                                                       \
+  cuda_Array *copy = copy_array(self);                                                                 \
+                                                                                                       \
+  return cuda_error2(cudaml_u##FUNC(self->d_mem->d_ptr, a_elements(self), copy->d_mem->d_ptr),         \
+                     "cuda_Array_u" #FUNC) ? NULL : Py_BuildValue("O", copy);                          \
+}
+
+UNARY_FUNCTION_METHOD(sqrt)
+UNARY_FUNCTION_METHOD(log)
+UNARY_FUNCTION_METHOD(log2)
+UNARY_FUNCTION_METHOD(log10)
+
+UNARY_FUNCTION_METHOD(sin)
+UNARY_FUNCTION_METHOD(cos)
+UNARY_FUNCTION_METHOD(tan)
+
+UNARY_FUNCTION_METHOD(sinh)
+UNARY_FUNCTION_METHOD(cosh)
+UNARY_FUNCTION_METHOD(tanh)
+
+UNARY_FUNCTION_METHOD(exp)
+UNARY_FUNCTION_METHOD(exp10)
+
+UNARY_FUNCTION_METHOD(sinpi)
+UNARY_FUNCTION_METHOD(cospi)
+
+UNARY_FUNCTION_METHOD(asin)
+UNARY_FUNCTION_METHOD(acos)
+UNARY_FUNCTION_METHOD(atan)
+UNARY_FUNCTION_METHOD(asinh)
+UNARY_FUNCTION_METHOD(acosh)
+UNARY_FUNCTION_METHOD(atanh)
+
+UNARY_FUNCTION_METHOD(erf)
+UNARY_FUNCTION_METHOD(erfc)
+UNARY_FUNCTION_METHOD(erfinv)
+UNARY_FUNCTION_METHOD(erfcinv)
+UNARY_FUNCTION_METHOD(lgamma)
+UNARY_FUNCTION_METHOD(tgamma)
+
+UNARY_FUNCTION_METHOD(trunc)
+UNARY_FUNCTION_METHOD(round)
+UNARY_FUNCTION_METHOD(rint)
+UNARY_FUNCTION_METHOD(floor)
+UNARY_FUNCTION_METHOD(ceil)
 
 #endif // CUDAML
 

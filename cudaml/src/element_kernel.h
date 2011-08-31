@@ -19,7 +19,7 @@ NAME##_element_kernel<TYPE>(TYPE* a, TYPE scalar, TYPE* r, unsigned int n);
 #define ARRAY_ELEMENTWISE(NAME, TYPE)                                        \
 cudaError_t cudaml_e##NAME(TYPE* a, size_t n, TYPE s, TYPE* r) {             \
                                                                              \
- int threadsPerBlock = 256;                                                  \
+ int threadsPerBlock = THREADS_PER_BLOCK;                                                  \
  int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;            \
                                                                              \
  NAME##_element_kernel<TYPE><<<blocksPerGrid, threadsPerBlock>>>(a, s, r, n);\
@@ -48,7 +48,7 @@ NAME##_element_v_kernel<TYPE>(TYPE* a, TYPE* v, TYPE* r, unsigned int m, unsigne
 #define ARRAY_ELEMENTWISE_VEC(NAME, TYPE)                                        \
   cudaError_t cudaml_ev##NAME(TYPE* a, size_t m, TYPE* v, size_t n, TYPE* r) {   \
                                                                                  \
- int threadsPerBlock = 256;                                                      \
+ int threadsPerBlock = THREADS_PER_BLOCK;                                                    \
  int blocksPerGrid = (m + threadsPerBlock - 1) / threadsPerBlock;                \
                                                                                  \
  NAME##_element_v_kernel<TYPE><<<blocksPerGrid, threadsPerBlock>>>(a, v, r, m, n); \
@@ -75,14 +75,14 @@ template void                                                                   
 #define ARRAY_ELEMENTWISE_ARY(NAME, TYPE)                                                        \
   cudaError_t cudaml_ea##NAME(TYPE* a, size_t m, size_t n, TYPE* v, size_t k, TYPE* r) {         \
                                                                                                  \
- int threadsPerBlock = 256;                                                                      \
+ int threadsPerBlock = THREADS_PER_BLOCK;                                                        \
  int blocksPerGrid = (m*n + threadsPerBlock - 1) / threadsPerBlock;                              \
                                                                                                  \
  NAME##_element_a_kernel<TYPE><<<blocksPerGrid, threadsPerBlock>>>(a, v, r, m, n, k);            \
  return cudaGetLastError();                                                                      \
 }
 
-/* unitary kernel */
+/* unary kernel */
 
 #define ELEMENT_U_KERNEL(NAME, OP)                                            \
 template <class T>                                                            \
@@ -100,10 +100,10 @@ NAME##_element_u_kernel<TYPE>(TYPE* a, TYPE* r, unsigned int m);
 #define ARRAY_ELEMENTWISE_UNARY(NAME, TYPE)                                                      \
 cudaError_t cudaml_u##NAME(TYPE* a, size_t m, TYPE* r) {                                         \
                                                                                                  \
- int threadsPerBlock = 256;                                                                      \
+ int threadsPerBlock = THREADS_PER_BLOCK;                                                        \
  int blocksPerGrid = (m + threadsPerBlock - 1) / threadsPerBlock;                                \
                                                                                                  \
- NAME##_element_a_kernel<TYPE><<<blocksPerGrid, threadsPerBlock>>>(a, r, m);                     \
+ NAME##_element_u_kernel<TYPE><<<blocksPerGrid, threadsPerBlock>>>(a, r, m);                     \
  return cudaGetLastError();                                                                      \
 }
 

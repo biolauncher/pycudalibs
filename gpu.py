@@ -18,9 +18,10 @@
 
 import _cula
 
-class CUDAdevice (object):
+class device (object):
 
     def __init__(self, device_number=0):
+        self.device_number = device_number
         _cula.select_device(device_number)
         _cula.init()
 
@@ -41,6 +42,7 @@ class CUDAdevice (object):
         return _cula.device_count()
 
     def close(self):
+        # TODO make this call cudaReset
         _cula.close()
 
 
