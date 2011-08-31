@@ -121,6 +121,7 @@ class TestML (unittest.TestCase):
         # XXX this precision doesn't always return true
         self.assert_(test.arrays_equal(sn, s.toarray(), 1E-03))
 
+
 def suite_single():
     suite = unittest.TestSuite()
     tests = [

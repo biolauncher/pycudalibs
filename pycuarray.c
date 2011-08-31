@@ -255,19 +255,19 @@ static PyMemberDef cuda_Array_members[] = {
  **************/
 
 static PyMethodDef cuda_Array_methods[] = {
-  {"toarray", (PyCFunction) cuda_Array_2numpyArray, METH_VARARGS,
+  {"toarray", (PyCFunction) cuda_Array_2numpyArray, METH_NOARGS,
    "Store CUDA device array into a host numpy array."},
-  {"transpose", (PyCFunction) cuda_Array_transpose, METH_VARARGS,
+  {"transpose", (PyCFunction) cuda_Array_transpose, METH_NOARGS,
    "Transpose of array."},
   {"dot", (PyCFunction) cuda_Array_dot, METH_VARARGS,
    "Inner product of vectors and matrices."},
   {"multiply", (PyCFunction) cuda_Array_scale, METH_VARARGS,
    "Element by element multiply."},
-  {"copy", (PyCFunction) cuda_Array_copy, METH_VARARGS,
+  {"copy", (PyCFunction) cuda_Array_copy, METH_NOARGS,
    "Create a copy of a CUDA array using only device-device transfer."},
-  {"norm", (PyCFunction) cuda_Array_2norm, METH_VARARGS,
+  {"norm", (PyCFunction) cuda_Array_2norm, METH_NOARGS,
    "The 2norm of a vector or Frobenius or Hilbert-Schmidt norm of a matrix."},
-  {"asum", (PyCFunction) cuda_Array_asum, METH_VARARGS,
+  {"asum", (PyCFunction) cuda_Array_asum, METH_NOARGS,
    "The absolute sum of a CUDA device array."},
   {"reshape", (PyCFunction) cuda_Array_reshape, METH_VARARGS,
    "Reshape the dimensions of a CUDA device array."},
@@ -277,28 +277,27 @@ static PyMethodDef cuda_Array_methods[] = {
    "Singular value decomposion of CUDA array - returns tuple of (U S VT) device arrays."},
   {"eigensystem", (PyCFunction) cuda_Array_eigensystem, METH_VARARGS | METH_KEYWORDS,
    "Compute eigenvalues and optionally left and/or right eigenvectors of a square matrix."},
-  {"adjoint", (PyCFunction) cuda_Array_conjugateTranspose, METH_VARARGS,
+  {"adjoint", (PyCFunction) cuda_Array_conjugateTranspose, METH_NOARGS,
    "Conjugate transpose of a matrix"},
 #endif
 
 #ifdef CUDAML
-  {"centralise", (PyCFunction) cuda_Array_centralise, METH_VARARGS,
-   "Centralised (zero sum) in each column of matrix/vector."},
-  {"sum", (PyCFunction) cuda_Array_sum, METH_VARARGS,
+ 
+  {"sum", (PyCFunction) cuda_Array_sum, METH_NOARGS,
    "Sum of matrix/vector."},
-  {"max", (PyCFunction) cuda_Array_max, METH_VARARGS,
+  {"max", (PyCFunction) cuda_Array_max, METH_NOARGS,
    "Maximum value of matrix/vector."},
-  {"min", (PyCFunction) cuda_Array_min, METH_VARARGS,
+  {"min", (PyCFunction) cuda_Array_min, METH_NOARGS,
    "Minimum value of matrix/vector."},
-  {"product", (PyCFunction) cuda_Array_product, METH_VARARGS,
+  {"product", (PyCFunction) cuda_Array_product, METH_NOARGS,
    "Product of matrix/vector."},
-  {"csum", (PyCFunction) cuda_Array_csum, METH_VARARGS,
+  {"csum", (PyCFunction) cuda_Array_csum, METH_NOARGS,
    "Column sum of matrix/vector."},
-  {"cmax", (PyCFunction) cuda_Array_cmax, METH_VARARGS,
+  {"cmax", (PyCFunction) cuda_Array_cmax, METH_NOARGS,
    "Column max of matrix/vector."},
-  {"cmin", (PyCFunction) cuda_Array_cmin, METH_VARARGS,
+  {"cmin", (PyCFunction) cuda_Array_cmin, METH_NOARGS,
    "Column min of matrix/vector."},
-  {"cproduct", (PyCFunction) cuda_Array_cproduct, METH_VARARGS,
+  {"cproduct", (PyCFunction) cuda_Array_cproduct, METH_NOARGS,
    "Column product of matrix/vector."},
   {"add", (PyCFunction) cuda_Array_esum, METH_VARARGS,
    "Element by element add matrix/vector."},
@@ -960,20 +959,6 @@ cuda_Array_conjugateTranspose(cuda_Array* self) {
  * CULAML custom ml kernel library 
  **********************************/
 
-static PyObject*
-cuda_Array_centralise(cuda_Array* self) {
-
-  if (isdouble(self)) {
-    PyErr_SetString(PyExc_NotImplementedError, "double precision reduction not yet implemented");
-    return NULL;
-  }
-
-  if (cuda_error2(null(), "cuda_Array_centralise"))
-    return NULL;
-  else
-    return Py_BuildValue("O", self);
-                  
-}
 
 static PyObject*
 cuda_Array_sum(cuda_Array* self) {
@@ -1176,12 +1161,25 @@ cuda_Array_esum(cuda_Array *self, PyObject *args) {
           PyErr_SetString(PyExc_ValueError, "array types are not equivalent");
           return NULL;
         }
+
+        // check dimensions and use relevant kernel
+        /* if number of columns matches vector then broadcast to columns */
+        if (ismatrix(self) && self->a_dims[1] == other->a_dims[0]) {
+
+          return cuda_error2(cudaml_easum(self->d_mem->d_ptr, self->a_dims[0], self->a_dims[1], 
+                                          other->d_mem->d_ptr, other->a_dims[0],
+                                          copy->d_mem->d_ptr), 
+                             "cuda_Array_easum") ? NULL : Py_BuildValue("O", copy);
+        
    
-        return cuda_error2(cudaml_evsum(self->d_mem->d_ptr, a_elements(self), 
-                                        other->d_mem->d_ptr, a_elements(other),
-                                        copy->d_mem->d_ptr), 
-                           "cuda_Array_evsum") ? NULL : Py_BuildValue("O", copy);
-      
+        } else { 
+          /* broadcast the vector to the array */
+          return cuda_error2(cudaml_evsum(self->d_mem->d_ptr, a_elements(self), 
+                                          other->d_mem->d_ptr, a_elements(other),
+                                          copy->d_mem->d_ptr), 
+                             "cuda_Array_evsum") ? NULL : Py_BuildValue("O", copy);
+        }
+
       } else {
         PyErr_SetString(PyExc_ValueError, "argument type not applicable to this array");
         return NULL;
@@ -1250,12 +1248,23 @@ cuda_Array_emul(cuda_Array *self, PyObject *args) {
           PyErr_SetString(PyExc_ValueError, "array types are not equivalent");
           return NULL;
         }
+
+        if (ismatrix(self) && self->a_dims[1] == other->a_dims[0]) {
+          /* broadcast to columns */
+          return cuda_error2(cudaml_eamul(self->d_mem->d_ptr, self->a_dims[0], self->a_dims[1], 
+                                          other->d_mem->d_ptr, other->a_dims[0],
+                                          copy->d_mem->d_ptr), 
+                             "cuda_Array_eamul") ? NULL : Py_BuildValue("O", copy);
+        
    
-        return cuda_error2(cudaml_evmul(self->d_mem->d_ptr, a_elements(self), 
-                                        other->d_mem->d_ptr, a_elements(other),
-                                        copy->d_mem->d_ptr), 
-                           "cuda_Array_evmul") ? NULL : Py_BuildValue("O", copy);
-      
+        } else { 
+          /* broadcast the vector to the array */
+          return cuda_error2(cudaml_evmul(self->d_mem->d_ptr, a_elements(self), 
+                                          other->d_mem->d_ptr, a_elements(other),
+                                          copy->d_mem->d_ptr), 
+                             "cuda_Array_evmul") ? NULL : Py_BuildValue("O", copy);
+        }
+   
       } else {
         PyErr_SetString(PyExc_ValueError, "argument type not applicable to this array");
         return NULL;

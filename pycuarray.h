@@ -76,6 +76,10 @@ static inline int isvector(cuda_Array* d) {
   return d->a_ndims == 1 ? 1 : 0;
 }
 
+static inline int ismatrix(cuda_Array* d) {
+  return d->a_ndims == 2 ? 1 : 0;
+}
+
 static inline int iscomplex(cuda_Array* d) {
   return PyTypeNum_ISCOMPLEX(d->a_dtype->type_num);
 }
@@ -127,7 +131,7 @@ static PyObject* cuda_Array_cmin(cuda_Array*);
 static PyObject* cuda_Array_cproduct(cuda_Array*);
 static PyObject* cuda_Array_esum(cuda_Array*, PyObject*);
 static PyObject* cuda_Array_emul(cuda_Array*, PyObject*);
-static PyObject* cuda_Array_centralise(cuda_Array*);
+
 #endif // CUDAML
 
 #endif

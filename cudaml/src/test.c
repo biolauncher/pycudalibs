@@ -20,7 +20,6 @@ static inline int cuda_error(cudaError_t sts, const char* info) {
 
 int main(int argc, char** argv) {
   cuda_error(null(), "null kernel invokation");
-  cuda_error(simple(NULL, 0), "simple kernel invokation");
   
   // real kernels 
   

@@ -6,9 +6,13 @@ iris = datasets.load_iris()
 dev=gpu.CUDAdevice(0)
 A_=cn.array(iris.data, dtype=cn.float32)
 
-def pca_test():
-    # TODO centralizer kernel
-    X_ = A_.add(A_.csum().mul(-1))
-    Y_= X_.T.dot(X_).eigensystem(pure=False)    # no need to preserve intermediate matrix
-    return Y_
+
+def centralise(A):
+    return A.add(A.csum().mul(-1./A.shape[0]))
+
+def pca_test(A):
+    # TODO centraliser kernel
+    X = centralise(A)
+    return X.T.dot(X).eigensystem(pure=False)    # no need to preserve intermediate matrix
+
 

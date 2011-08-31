@@ -52,4 +52,10 @@ def identity(*args, **keyw):
     return _cunumpy.array(numpy.identity(*args, **keyw), **keyw)
 
 
+# numpy like functions to save subclassing
+def centralise(A):
+    return A.add(A.csum().mul(-1./A.shape[0]))
+
+def centralize(A):
+    return centralise(A)
 

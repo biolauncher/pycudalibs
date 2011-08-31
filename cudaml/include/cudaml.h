@@ -12,7 +12,6 @@ extern "C" {
 #endif
   // Library functions
   cudaError_t null(void);
-  cudaError_t simple(void*, size_t);
   // device memory functions with host scalar reduction
   cudaError_t cudaml_asum(float*, size_t, float*);
   cudaError_t cudaml_amax(float*, size_t, float*);
@@ -28,8 +27,10 @@ extern "C" {
   cudaError_t cudaml_evsum(float*, size_t, float*, size_t, float*);
   cudaError_t cudaml_emul(float*, size_t, float, float*);
   cudaError_t cudaml_evmul(float*, size_t, float*, size_t, float*);
+  cudaError_t cudaml_easum(float*, size_t, size_t, float*, size_t, float*);
+  cudaError_t cudaml_eamul(float*, size_t, size_t, float*, size_t, float*);
   // device memory functions with device matrix result
-  cudaError_t cudaml_centraliser(void*, void*, size_t, size_t);
+  // this in python for now cudaError_t cudaml_centraliser(void*, void*, size_t, size_t);
 
 #ifdef __cplusplus
 }
