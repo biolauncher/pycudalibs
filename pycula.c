@@ -28,12 +28,10 @@ This file is part of pycudalibs
 /**
  * get number of CUDA devices
  */
-static PyObject* getDeviceCount(PyObject* self, PyObject* args) {
+static PyObject* getDeviceCount(PyObject* self) {
   int n_dev;
 
-  if (!PyArg_ParseTuple(args, "")) 
-    return NULL;
-  else if (cula_error(culaGetDeviceCount(&n_dev), "culaGetDeviceCount"))
+  if (cula_error(culaGetDeviceCount(&n_dev), "culaGetDeviceCount"))
     return NULL;
   else 
     return Py_BuildValue("i", n_dev);
@@ -55,23 +53,21 @@ static PyObject* selectDevice(PyObject* self, PyObject* args) {
 
 }
 
-static PyObject* init(PyObject* self, PyObject* args) {
-  if (!PyArg_ParseTuple(args, "")) 
-    return NULL;
-  else if (cula_error(culaInitialize(), "culaInitialize"))
+static PyObject* init(PyObject* self) {
+
+  if (cula_error(culaInitialize(), "culaInitialize"))
     return NULL;
   else 
     return Py_BuildValue("");
 }
 
-static PyObject* shutdown(PyObject* self, PyObject* args) {
-  if (!PyArg_ParseTuple(args, "")) 
-    return NULL;
-  // culaShutdown doesn't return any value
-  else {
-    culaShutdown();
+static PyObject* reset(PyObject* self) {
+    cudaDeviceReset();
     return Py_BuildValue("");
-  }
+}
+
+static PyObject* shutdown(PyObject* self) {
+    return Py_BuildValue("");
 }
 
 
@@ -81,16 +77,22 @@ static PyObject* shutdown(PyObject* self, PyObject* args) {
 
 static PyMethodDef _cula_methods[] = {
 
-  {"device_count", getDeviceCount, METH_VARARGS,
+  {"device_count", getDeviceCount, METH_NOARGS,
    "Get the number of CUDA capable devices."},
 
   {"select_device", selectDevice, METH_VARARGS,
    "Select the CUDA device to attach to the host thread."},
 
-  {"init", init, METH_VARARGS, 
+  {"init", init, METH_NOARGS, 
    "Initialise CULA library by attaching to CUDA device that is bound to the calling host thread."},
 
-  {"close", shutdown, METH_VARARGS,
+  {"reset", reset, METH_NOARGS,
+   "Reset the CUDA device attached to the current thread."},
+
+  {"close", reset, METH_NOARGS,
+   "Reset the CUDA device attached to the current thread."},
+
+  {"shutdown", shutdown, METH_NOARGS,
    "Shutdown the CULA library."},
   {NULL, NULL, 0, NULL}
 };
