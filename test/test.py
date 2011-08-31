@@ -3,7 +3,7 @@ import numpy as np
 import gpu
 
 # initialize default CUDA device
-gpu.CUDAdevice()
+gpu.device()
 
 # we will be testing linear algebra on CUDA we we need an approximation
 def arrays_equal(a, b, epsilon=1e-05):
