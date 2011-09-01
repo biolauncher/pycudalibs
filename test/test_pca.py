@@ -11,7 +11,6 @@ def centralise(A):
     return A.add(A.csum().mul(-1./A.shape[0]))
 
 def pca_test(A):
-    # TODO centraliser kernel
     X = centralise(A)
     return X.T.dot(X).eigensystem(pure=False)    # no need to preserve intermediate matrix
 

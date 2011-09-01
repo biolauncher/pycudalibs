@@ -10,7 +10,8 @@ import test
 class TestML (unittest.TestCase):
     
     def setUp(self):
-        self.real_vector = np.random.randn(2578)
+        self.real_vector = np.random.randn(2587)
+        self.real_colvec = np.random.randn(80)
         self.real_mata = np.random.randn(2602, 80)
         self.complex_vector = np.random.randn(2587) + 1j * np.random.randn(2587)
         self.complex_mata = np.random.randn(2602,80) + 1j * np.random.randn(2602,80)
@@ -108,7 +109,7 @@ class TestML (unittest.TestCase):
         # XXX this precision doesn't always return true
         self.assert_(test.arrays_equal(sn, s, 1E-03))
 
-    def test_real_single_matrix_add(self):
+    def test_real_single_matrix_add_scalar(self):
         A_ = cn.array(self.real_mata, dtype=cn.float32)
         A = np.array(self.real_mata, dtype=np.float32)
         S = 27.345
@@ -120,6 +121,83 @@ class TestML (unittest.TestCase):
         #print sn
         # XXX this precision doesn't always return true
         self.assert_(test.arrays_equal(sn, s.toarray(), 1E-03))
+
+    def test_real_single_add_vector(self):
+        V = np.array(self.real_vector, dtype=np.float32)
+        V_ = cn.array(self.real_vector, dtype=cn.float32)
+        # gpu
+        R_ = V_.add(V_)
+        # cpu
+        R = V + V
+        #
+        self.assert_(test.arrays_equal(R, R_.toarray(), 1E-03))
+
+    def test_real_single_matrix_add_column_vector(self):
+        A_ = cn.array(self.real_mata, dtype=cn.float32)
+        A = np.array(self.real_mata, dtype=np.float32)
+        V = np.array(self.real_colvec, dtype=np.float32)
+        V_ = cn.array(self.real_colvec, dtype=cn.float32)
+        # gpu
+        R_ = A_.add(V_)
+        # cpu
+        R = A + V
+        #
+        self.assert_(test.arrays_equal(R, R_.toarray(), 1E-03))
+
+    def test_real_single_matrix_add_matrix(self):
+        A_ = cn.array(self.real_mata, dtype=cn.float32)
+        A = np.array(self.real_mata, dtype=np.float32)
+        # gpu
+        R_ = A_.add(A_)
+        # cpu
+        R = A + A
+        #
+        self.assert_(test.arrays_equal(R, R_.toarray(), 1E-03))
+
+    def test_real_single_matrix_mul_scalar(self):
+        A_ = cn.array(self.real_mata, dtype=cn.float32)
+        A = np.array(self.real_mata, dtype=np.float32)
+        S = 27.345
+        # gpu
+        s = A_.mul(S)
+        #print s
+        # cpu
+        sn = A * S
+        #print sn
+        # XXX this precision doesn't always return true
+        self.assert_(test.arrays_equal(sn, s.toarray(), 1E-03))
+
+    def test_real_single_mul_vector(self):
+        V = np.array(self.real_vector, dtype=np.float32)
+        V_ = cn.array(self.real_vector, dtype=cn.float32)
+        # gpu
+        R_ = V_.mul(V_)
+        # cpu
+        R = V * V
+        #
+        self.assert_(test.arrays_equal(R, R_.toarray(), 1E-03))
+
+    def test_real_single_matrix_mul_column_vector(self):
+        A_ = cn.array(self.real_mata, dtype=cn.float32)
+        A = np.array(self.real_mata, dtype=np.float32)
+        V = np.array(self.real_colvec, dtype=np.float32)
+        V_ = cn.array(self.real_colvec, dtype=cn.float32)
+        # gpu
+        R_ = A_.mul(V_)
+        # cpu
+        R = A * V
+        #
+        self.assert_(test.arrays_equal(R, R_.toarray(), 1E-03))
+
+    def test_real_single_matrix_mul_matrix(self):
+        A_ = cn.array(self.real_mata, dtype=cn.float32)
+        A = np.array(self.real_mata, dtype=np.float32)
+        # gpu
+        R_ = A_.mul(A_)
+        # cpu
+        R = A * A
+        #
+        self.assert_(test.arrays_equal(R, R_.toarray(), 1E-03))
 
 
 def suite_single():
@@ -133,8 +211,16 @@ def suite_single():
         'test_real_single_matrix_cmax',
         'test_real_single_matrix_cmin',
         'test_real_single_matrix_cproduct',
-        'test_real_single_matrix_add'
-        
+        # scalr, vector and matrix mul and add operands
+        'test_real_single_matrix_add_scalar',
+        'test_real_single_add_vector',
+        'test_real_single_matrix_add_column_vector',
+        'test_real_single_matrix_add_matrix',
+        'test_real_single_matrix_mul_scalar',
+        'test_real_single_mul_vector',
+        'test_real_single_matrix_mul_column_vector',
+        'test_real_single_matrix_mul_matrix'
+        # todo math unit tests
         ]
     
     return unittest.TestSuite(map(TestML, tests))

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2009 Model Sciences Ltd.
+# Copyright (C) 2009-2011 Model Sciences Ltd.
 #
 # This file is  part of pycudalibs
 #
@@ -51,11 +51,22 @@ def ones(*args, **keyw):
 def identity(*args, **keyw):
     return _cunumpy.array(numpy.identity(*args, **keyw), **keyw)
 
+#
+# be nice if we can switch on str/repr method to retrieve cunmpy array contents as numpy arrays
+#
+def set_printoptions(printdata=False):
+    pass
 
+# move these to cunumpy.learn package
+#
 # numpy like functions to save subclassing
 def centralise(A):
     return A.add(A.csum().mul(-1./A.shape[0]))
 
 def centralize(A):
     return centralise(A)
+
+def singular_values(A):
+    X = centralise(A)
+    return X.T.dot(X).eigensystem(pure=False)[0].sqrt()
 
