@@ -28,12 +28,6 @@ class device (object):
     def __enter__(self):
         return self
 
-    # currently this closes down the library! which seems to
-    # cause a problem at ipython shutdown (as package symbols are deleted?)
-    # also a thread may only be bound to one cuda device XXX review in light of CUDA4
-    # so the "with CUDAdevice" is not such a useful idiom right now. but I am leaving this
-    # "bug" in for now as it does not cause a problem with regular python.
-    
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
         
@@ -42,7 +36,9 @@ class device (object):
         return _cula.device_count()
 
     def close(self):
-        # TODO make this call cudaReset
         _cula.close()
 
+    @staticmethod
+    def shutdown():
+        _cula.shutdown()
 
