@@ -62,12 +62,14 @@ static PyObject* init(PyObject* self) {
 }
 
 static PyObject* reset(PyObject* self) {
-    cudaDeviceReset();
-    return Py_BuildValue("");
+  cudaDeviceReset();
+  return Py_BuildValue("");
 }
 
+
 static PyObject* shutdown(PyObject* self) {
-    return Py_BuildValue("");
+  culaShutdown();
+  return Py_BuildValue("");
 }
 
 
@@ -77,22 +79,22 @@ static PyObject* shutdown(PyObject* self) {
 
 static PyMethodDef _cula_methods[] = {
 
-  {"device_count", getDeviceCount, METH_NOARGS,
+  {"device_count", (PyCFunction) getDeviceCount, METH_NOARGS,
    "Get the number of CUDA capable devices."},
 
-  {"select_device", selectDevice, METH_VARARGS,
+  {"select_device", (PyCFunction) selectDevice, METH_VARARGS,
    "Select the CUDA device to attach to the host thread."},
 
-  {"init", init, METH_NOARGS, 
+  {"init", (PyCFunction) init, METH_NOARGS, 
    "Initialise CULA library by attaching to CUDA device that is bound to the calling host thread."},
 
-  {"reset", reset, METH_NOARGS,
+  {"reset", (PyCFunction) reset, METH_NOARGS,
    "Reset the CUDA device attached to the current thread."},
 
-  {"close", reset, METH_NOARGS,
+  {"close", (PyCFunction) reset, METH_NOARGS,
    "Reset the CUDA device attached to the current thread."},
 
-  {"shutdown", shutdown, METH_NOARGS,
+  {"shutdown", (PyCFunction) shutdown, METH_NOARGS,
    "Shutdown the CULA library."},
   {NULL, NULL, 0, NULL}
 };
