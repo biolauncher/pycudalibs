@@ -29,6 +29,7 @@ This file is part of pycudalibs
 static inline int cula_error(culaStatus status, char* where) {
   trace("CULACALL %s: status = %d\n", where, status);
 
+  // XXX for some reason we are returning without the exception set - check caller code...
   if (status == culaNoError) {
     return 0;
 

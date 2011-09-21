@@ -578,7 +578,7 @@ cuda_Array_dot(cuda_Array *self, PyObject *args) {
         int n = other->a_dims[1];
 
         if (k != kb) {
-          PyErr_SetString(PyExc_ValueError, "arrays have wrong shapes for matrix-vector inner product");
+          PyErr_SetString(PyExc_ValueError, "arrays have wrong shapes for matrix-matrix inner product");
           return NULL;
         }
 

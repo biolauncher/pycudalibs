@@ -38,6 +38,9 @@ class device (object):
     def close(self):
         _cula.close()
 
+    def reset(self):
+        _cula.reset()
+
     @staticmethod
     def shutdown():
         _cula.shutdown()
