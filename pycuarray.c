@@ -95,8 +95,7 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
           dtype->elsize, PyTypeNum_ISCOMPLEX(dtype->type_num) ? "complex" : "real");
 
     Py_INCREF(object);
-    // cast supplied initialiser to a numpy array in required format checking dimensions
-    // XXXX added NPY_FORCECAST for sage interoperability (yetch) then removed it again...
+    // morph supplied initialiser to a numpy array in required format, checking dimensions and dtype
     array = (PyArrayObject*) PyArray_FromAny(object, dtype, 
                                              DEVICE_ARRAY_MINDIMS, DEVICE_ARRAY_MAXDIMS, 
                                              NPY_FORTRAN | NPY_ALIGNED, NULL);
@@ -144,8 +143,9 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
 
       // finally update dtype in self
       self->a_dtype = dtype;
-      // decref the initialiser array since we are done with it?
-      //Py_DECREF(array);
+      // decref the initialiser array since we are done with it? - this fixes another leak but...
+      Py_DECREF(array);
+      Py_INCREF(self->a_dtype); // this is an unscientific attempt to be rid of some reference count erros
       return 0;
     }
   } else return -1;
