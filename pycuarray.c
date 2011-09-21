@@ -129,7 +129,8 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
         return -1;
       }
 
-      //Py_INCREF(self->d_mem);
+      //Py_INCREF(self->d_mem); we own this and are not passing it to python
+
       // copy data from initialiser to device memory
       void* source = PyArray_DATA(array);
       
@@ -137,12 +138,14 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
                      "init:cublasSetVector")) {
         Py_DECREF(array);
         Py_DECREF(dtype);
-        Py_DECREF(self->d_mem); //???
+        Py_DECREF(self->d_mem);
         return -1;
       }
 
       // finally update dtype in self
       self->a_dtype = dtype;
+      // decref the initialiser array since we are done with it?
+      //Py_DECREF(array);
       return 0;
     }
   } else return -1;
@@ -154,7 +157,7 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
 static inline PyObject *
 _stringify(cuda_Array *self) {
   if (self->a_ndims == 2)
-    return PyString_FromFormat("<%s %p %s%d matrix(%d,%d) %d @%p>",
+    return PyString_FromFormat("<%s %p %s%d matrix(%d,%d) %d #%d @%p>",
                                self->ob_type->tp_name,
                                self->d_mem->d_ptr,
                                PyTypeNum_ISCOMPLEX(self->a_dtype->type_num) ? "complex" : "float",
@@ -162,15 +165,17 @@ _stringify(cuda_Array *self) {
                                self->a_dims[0],
                                self->a_dims[1],
                                self->d_mem->d_pitch,
+                               self->ob_refcnt, // XXX remove this soon!
                                self);
   else
-    return PyString_FromFormat("<%s %p %s%d vector(%d) %d @%p>",
+    return PyString_FromFormat("<%s %p %s%d vector(%d) %d #%d @%p>",
                                self->ob_type->tp_name,
                                self->d_mem->d_ptr,
                                PyTypeNum_ISCOMPLEX(self->a_dtype->type_num) ? "complex" : "float",
                                self->e_size * 8,
                                self->a_dims[0],
                                self->d_mem->d_pitch,
+                               self->ob_refcnt,
                                self);
 }
 
@@ -439,7 +444,7 @@ cuda_Array_transpose(cuda_Array *self, PyObject *args) {
       Py_INCREF(clone->d_mem);
       clone->a_dtype = self->a_dtype;
       Py_INCREF(clone->a_dtype);
-      return Py_BuildValue("O", clone);
+      return Py_BuildValue("N", clone); // this is a new reference
 
     } else return NULL;
   
@@ -533,7 +538,7 @@ cuda_Array_dot(cuda_Array *self, PyObject *args) {
           if (cublas_error("sgemm")) return NULL;
         }
 
-        return Py_BuildValue("O", C);
+        return Py_BuildValue("N", C);
       }
       
     } else {
@@ -568,10 +573,11 @@ cuda_Array_dot(cuda_Array *self, PyObject *args) {
           if (cublas_error("sgemm")) return NULL;
         }
 
-        return Py_BuildValue("O", C);
+        return Py_BuildValue("N", C);
       
       } else {
         // matrix-matrix sgemm or cgemm
+        
         int m = self->a_dims[0];
         int k = self->a_dims[1];
         int kb = other->a_dims[0];
@@ -601,7 +607,7 @@ cuda_Array_dot(cuda_Array *self, PyObject *args) {
           if (cublas_error("sgemm")) return NULL;
         }
 
-        return Py_BuildValue("O", C);
+        return Py_BuildValue("N", C);
       }
     } 
   }
@@ -637,7 +643,7 @@ cuda_Array_scale(cuda_Array *self, PyObject *args) {
           
           // call blas complex-complex case
           cublasCscal(a_elements(copy), c_scalar, copy->d_mem->d_ptr, 1);
-          return cublas_error("cscal") ? NULL : Py_BuildValue("O", copy);
+          return cublas_error("cscal") ? NULL : Py_BuildValue("N", copy);
             
         } else {
           PyErr_SetString(PyExc_ValueError, "cannot scale real array with complex scalar - yet!");
@@ -651,12 +657,12 @@ cuda_Array_scale(cuda_Array *self, PyObject *args) {
         if (iscomplex(copy)) {
           
           cublasCsscal(a_elements(copy), s, copy->d_mem->d_ptr, 1);
-          return cublas_error("csscal") ? NULL : Py_BuildValue("O", copy);
+          return cublas_error("csscal") ? NULL : Py_BuildValue("N", copy);
        
         } else {
           
           cublasSscal(a_elements(copy), s, copy->d_mem->d_ptr, 1);
-          return cublas_error("sscal") ? NULL : Py_BuildValue("O", copy);
+          return cublas_error("sscal") ? NULL : Py_BuildValue("N", copy);
         }
       }
 
@@ -741,7 +747,7 @@ cuda_Array_reshape(cuda_Array *self, PyObject *args) {
       Py_INCREF(clone->d_mem);
       clone->a_dtype = self->a_dtype;
       Py_INCREF(clone->a_dtype);
-      return Py_BuildValue("O", clone);
+      return Py_BuildValue("N", clone);
 
     } else return NULL;
   } else return NULL;
@@ -754,7 +760,7 @@ cuda_Array_reshape(cuda_Array *self, PyObject *args) {
 static PyObject* 
 cuda_Array_copy(cuda_Array *self) {
   cuda_Array *copy = copy_array(self);
-  return (copy == NULL) ? NULL : Py_BuildValue("O", copy);
+  return (copy == NULL) ? NULL : Py_BuildValue("N", copy);
 }
 
 /*************************
@@ -916,13 +922,13 @@ cuda_Array_eigensystem(cuda_Array* self, PyObject* args, PyObject* keywds) {
       if (culablas_error("deviceC|Zgesvd"))
         goto die;
       else if (leftv && rightv)
-        return Py_BuildValue("OOO", vl, w, vr);
+        return Py_BuildValue("NNN", vl, w, vr);
       else if (leftv)
-        return Py_BuildValue("OO", vl, w);
+        return Py_BuildValue("NN", vl, w);
       else if (rightv)
-        return Py_BuildValue("OO", w, vr);
+        return Py_BuildValue("NN", w, vr);
       else 
-        return Py_BuildValue("O", w);
+        return Py_BuildValue("N", w);
 
     } else {
 
@@ -993,7 +999,7 @@ cuda_Array_conjugateTranspose(cuda_Array* self) {
   if (culablas_error("deviceGeTransposeConjugate")) 
     return NULL;
   else 
-    return Py_BuildValue("O", c);
+    return Py_BuildValue("N", c);
 }
 #endif
 
@@ -1082,7 +1088,7 @@ cuda_Array_csum(cuda_Array* self) {
   if (cuda_error2(cudaml_csum(self->d_mem->d_ptr, m, n, colv->d_mem->d_ptr), "cuda_Array_csum"))
     return NULL;
   else
-    return Py_BuildValue("O", colv);
+    return Py_BuildValue("N", colv);
 }
 
 static PyObject*
@@ -1102,7 +1108,7 @@ cuda_Array_cmax(cuda_Array* self) {
   if (cuda_error2(cudaml_cmax(self->d_mem->d_ptr, m, n, colv->d_mem->d_ptr), "cuda_Array_cmax"))
     return NULL;
   else
-    return Py_BuildValue("O", colv);
+    return Py_BuildValue("N", colv);
 }
 
 static PyObject*
@@ -1122,7 +1128,7 @@ cuda_Array_cmin(cuda_Array* self) {
   if (cuda_error2(cudaml_cmin(self->d_mem->d_ptr, m, n, colv->d_mem->d_ptr), "cuda_Array_cmin"))
     return NULL;
   else
-    return Py_BuildValue("O", colv);
+    return Py_BuildValue("N", colv);
 }
 
 static PyObject*
@@ -1142,7 +1148,7 @@ cuda_Array_cproduct(cuda_Array* self) {
   if (cuda_error2(cudaml_cproduct(self->d_mem->d_ptr, m, n, colv->d_mem->d_ptr), "cuda_Array_cproduct"))
     return NULL;
   else
-    return Py_BuildValue("O", colv);
+    return Py_BuildValue("N", colv);
 }
 
 static PyObject*
@@ -1188,7 +1194,7 @@ cuda_Array_esum(cuda_Array *self, PyObject *args) {
         } else {
 
           return cuda_error2(cudaml_esum(self->d_mem->d_ptr, a_elements(self), s, copy->d_mem->d_ptr), 
-                             "cuda_Array_esum") ? NULL : Py_BuildValue("O", copy);
+                             "cuda_Array_esum") ? NULL : Py_BuildValue("N", copy);
         }
       }
 
@@ -1212,7 +1218,7 @@ cuda_Array_esum(cuda_Array *self, PyObject *args) {
           return cuda_error2(cudaml_easum(self->d_mem->d_ptr, self->a_dims[0], self->a_dims[1], 
                                           other->d_mem->d_ptr, other->a_dims[0],
                                           copy->d_mem->d_ptr), 
-                             "cuda_Array_easum") ? NULL : Py_BuildValue("O", copy);
+                             "cuda_Array_easum") ? NULL : Py_BuildValue("N", copy);
         
    
         } else { 
@@ -1220,7 +1226,7 @@ cuda_Array_esum(cuda_Array *self, PyObject *args) {
           return cuda_error2(cudaml_evsum(self->d_mem->d_ptr, a_elements(self), 
                                           other->d_mem->d_ptr, a_elements(other),
                                           copy->d_mem->d_ptr), 
-                             "cuda_Array_evsum") ? NULL : Py_BuildValue("O", copy);
+                             "cuda_Array_evsum") ? NULL : Py_BuildValue("N", copy);
         }
 
       } else {
@@ -1275,7 +1281,7 @@ cuda_Array_emul(cuda_Array *self, PyObject *args) {
         } else {
 
           return cuda_error2(cudaml_emul(self->d_mem->d_ptr, a_elements(self), s, copy->d_mem->d_ptr), 
-                             "cuda_Array_emul") ? NULL : Py_BuildValue("O", copy);
+                             "cuda_Array_emul") ? NULL : Py_BuildValue("N", copy);
         }
       }
 
@@ -1297,7 +1303,7 @@ cuda_Array_emul(cuda_Array *self, PyObject *args) {
           return cuda_error2(cudaml_eamul(self->d_mem->d_ptr, self->a_dims[0], self->a_dims[1], 
                                           other->d_mem->d_ptr, other->a_dims[0],
                                           copy->d_mem->d_ptr), 
-                             "cuda_Array_eamul") ? NULL : Py_BuildValue("O", copy);
+                             "cuda_Array_eamul") ? NULL : Py_BuildValue("N", copy);
         
    
         } else { 
@@ -1305,7 +1311,7 @@ cuda_Array_emul(cuda_Array *self, PyObject *args) {
           return cuda_error2(cudaml_evmul(self->d_mem->d_ptr, a_elements(self), 
                                           other->d_mem->d_ptr, a_elements(other),
                                           copy->d_mem->d_ptr), 
-                             "cuda_Array_evmul") ? NULL : Py_BuildValue("O", copy);
+                             "cuda_Array_evmul") ? NULL : Py_BuildValue("N", copy);
         }
    
       } else {
@@ -1360,7 +1366,7 @@ cuda_Array_epow(cuda_Array *self, PyObject *args) {
         } else {
 
           return cuda_error2(cudaml_epow(self->d_mem->d_ptr, a_elements(self), s, copy->d_mem->d_ptr), 
-                             "cuda_Array_epow") ? NULL : Py_BuildValue("O", copy);
+                             "cuda_Array_epow") ? NULL : Py_BuildValue("N", copy);
         }
       }
 
@@ -1382,7 +1388,7 @@ cuda_Array_epow(cuda_Array *self, PyObject *args) {
           return cuda_error2(cudaml_eapow(self->d_mem->d_ptr, self->a_dims[0], self->a_dims[1], 
                                           other->d_mem->d_ptr, other->a_dims[0],
                                           copy->d_mem->d_ptr), 
-                             "cuda_Array_eapow") ? NULL : Py_BuildValue("O", copy);
+                             "cuda_Array_eapow") ? NULL : Py_BuildValue("N", copy);
         
    
         } else { 
@@ -1390,7 +1396,7 @@ cuda_Array_epow(cuda_Array *self, PyObject *args) {
           return cuda_error2(cudaml_evpow(self->d_mem->d_ptr, a_elements(self), 
                                           other->d_mem->d_ptr, a_elements(other),
                                           copy->d_mem->d_ptr), 
-                             "cuda_Array_evpow") ? NULL : Py_BuildValue("O", copy);
+                             "cuda_Array_evpow") ? NULL : Py_BuildValue("N", copy);
         }
    
       } else {
@@ -1416,7 +1422,7 @@ cuda_Array_##FUNC(cuda_Array *self) {                                           
   cuda_Array *copy = copy_array(self);                                                                 \
                                                                                                        \
   return cuda_error2(cudaml_u##FUNC(self->d_mem->d_ptr, a_elements(self), copy->d_mem->d_ptr),         \
-                     "cuda_Array_u" #FUNC) ? NULL : Py_BuildValue("O", copy);                          \
+                     "cuda_Array_u" #FUNC) ? NULL : Py_BuildValue("N", copy);                          \
 }
 
 UNARY_FUNCTION_METHOD(sqrt)
@@ -1556,7 +1562,6 @@ copy_array(cuda_Array* self) {
     new->a_dtype = self->a_dtype;
     Py_INCREF(new->a_dtype);
   }
-  // N.B. don't return this to python user directly.
   return new;
 }
 
