@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2009-2011 Model Sciences Ltd.
+Copyright (C) 2009 Model Sciences Ltd.
 
 This file is part of pycudalibs
 
@@ -17,17 +17,24 @@ This file is part of pycudalibs
     License along with pycudalibs.  If not, see <http://www.gnu.org/licenses/>.  
 */
 
-/**
- * numpy integration with cuda device memory, defines module: _cunumpy
+
+/* 
+ * General macros and definitions
  */
 
+#if defined(_PYLIBS_H)
+#else
+#define _PYLIBS_H
 
-/*******************
- * module functions
- ******************/
-//#define CUNUMPY_MODULE
-//#include <pycunumpy.h>
-//#include <numpy/arrayobject.h>
-//#include <pycumem.h>
+#define max(a,b) (a)>(b)?(a):(b)
+#define min(a,b) (a)<(b)?(a):(b)
 
+#if DEBUG > 0
+#warning "N.B. tracing code will be compiled in"
+#include <stdio.h>
+#define trace(format, ...) fprintf(stderr, format, ## __VA_ARGS__)
+#else
+#define trace(format, ...)
+#endif
 
+#endif

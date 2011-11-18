@@ -17,10 +17,30 @@ This file is part of pycudalibs
     License along with pycudalibs.  If not, see <http://www.gnu.org/licenses/>.  
 */
 
-#if defined(_PYCUBLAS_H)
+#if defined(_PYCULA_H)
 #else
-#define _PYCUBLAS_H 1
-#include <pycunumpy.h>
+#define _PYCULA_H 1
 
+#include <cula.h>
+#include <pycunumpy.h>
+#include <pylibs.h>
+
+/* CULA error handling is more sophisticated than indicated here - TODO take advantage of it!*/
+static inline int cula_error(culaStatus status, char* where) {
+  trace("CULACALL %s: status = %d\n", where, status);
+
+  // XXX for some reason we are returning without the exception set - check caller code...
+  if (status == culaNoError) {
+    return 0;
+
+  } else {
+    PyErr_SetString(cuda_exception, culaGetStatusString(status));
+    return 1;
+  }
+}
+
+static inline int culablas_error(char* where) {
+  return cula_error(culaGetLastStatus(), where);
+}
 
 #endif

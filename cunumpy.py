@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2009 Model Sciences Ltd.
+# Copyright (C) 2009-2011 Model Sciences Ltd.
 #
 # This file is  part of pycudalibs
 #
@@ -16,10 +16,8 @@
 #    You should have received a copy of the Lesser GNU General Public
 #    License along with pycudalibs.  If not, see <http://www.gnu.org/licenses/>.  
 
-
-import _cunumpy
-import _cublas
 import numpy
+import _cunumpy
 
 #
 # the supported dtype(s)
@@ -31,36 +29,31 @@ complex128 = numpy.complex128
 
 array_types = [float32, float64, complex64, complex128]
 
-#
-# extend _cunumpy.array - XXX merely a wrapper
-#
-class CUDAarray(_cunumpy.array):
-    """
-    Encapsulates CUDA device based arrays and some CUBLAS based linear algebra in numpy style.
-    """
-    pass
 
 #
 # functions to provide numpy like factory methods for cunumpy.array objects
 #
-
 def array(*args, **keyw):
-    return CUDAarray(numpy.array(*args, **keyw), **keyw)
+    return _cunumpy.array(numpy.array(*args, **keyw), **keyw)
 
 def arange(*args, **keyw):
-    return CUDAarray(numpy.arange(*args, **keyw), **keyw)
+    return _cunumpy.array(numpy.arange(*args, **keyw), **keyw)
 
 def eye(*args, **keyw):
-    return CUDAarray(numpy.eye(*args, **keyw), **keyw)
+    return _cunumpy.array(numpy.eye(*args, **keyw), **keyw)
 
 def zeros(*args, **keyw):
-    return CUDAarray(numpy.zeros(*args, **keyw), **keyw)
+    return _cunumpy.array(numpy.zeros(*args, **keyw), **keyw)
 
 def ones(*args, **keyw):
-    return CUDAarray(numpy.ones(*args, **keyw), **keyw)
+    return _cunumpy.array(numpy.ones(*args, **keyw), **keyw)
 
 def identity(*args, **keyw):
-    return CUDAarray(numpy.identity(*args, **keyw), **keyw)
+    return _cunumpy.array(numpy.identity(*args, **keyw), **keyw)
 
-
+#
+# be nice if we can switch on str/repr method to retrieve cunmpy array contents as numpy arrays
+#
+def set_printoptions(printdata=False):
+    pass
 

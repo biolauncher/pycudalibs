@@ -24,17 +24,25 @@ import distutils.sysconfig as dsys
 import os
 import sys
 
-# force user to set these
+# CUDA
 cuda = os.getenv('CUDA_HOME')
 if not cuda:
-    print 'Please set CUDA_HOME to the root of the CUDA (or CULA) package (usually /usr/local/cu(d|l)a)'
+    print 'Please set CUDA_HOME to the root of the CUDA package (usually /usr/local/cuda)'
     sys.exit(1)
 
 cuda_include = cuda + '/include'
 cuda_lib = cuda + '/lib'
-
-# actually only CULA provides this - so check for architecture and existence below
 cuda_lib64 = cuda + '/lib64'
+
+# CULA
+cula = os.getenv('CULA_HOME')
+if not cula:
+    print 'Please set CULA_HOME to the root of the CULA package (usually /usr/local/cula)'
+    sys.exit(2)
+
+cula_include = cula + '/include'
+cula_lib = cula + '/lib'
+cula_lib64 = cula + '/lib64'
 
 
 # get numpy includes
@@ -46,57 +54,88 @@ except:
     print 'Cannot import numpy.distutils - is numpy installed?'
     sys.exit(3)
 if not numpy_includes:
-    print 'No numpy include directories! Build may fail...'
+    print 'No numpy include directories found - is numpy installed?'
+    sys.exit(4)
 
-#
-includes = ['.', cuda_include] + numpy_includes
-
-# 64bit libs supported and available?
-if dsys.get_config_var("SIZEOF_LONG") == 8 and os.path.exists(cuda_lib64):
-    library_dirs = [cuda_lib64]
-else:
-    library_dirs = [cuda_lib]
     
+# OK to try and build
+includes = ['.', cula_include, cuda_include] + numpy_includes
+
+# ensure CULA libraries come before CUDA - why?
+# are 64 bit libs supported and available?
+if dsys.get_config_var("SIZEOF_LONG") == 8 and os.path.exists(cuda_lib64) and os.path.exists(cula_lib64):
+    library_dirs = [cula_lib64, cuda_lib64]
+    print 'Building with 64 bit libraries' 
+else:
+    library_dirs = [cula_lib, cuda_lib]
+
+# cudaml custom kernel integration
+CUDAML_LIB = ''
+cudaml = './cudaml'
+cudaml_include = cudaml + "/include"
+
+if dsys.get_config_var("SIZEOF_LONG") == 8 and os.path.exists(cuda_lib64):
+    cudaml_lib = cudaml + '/lib64'
+else:
+    cudaml_lib = cudaml + '/lib'
+    
+if os.path.exists(cudaml):
+    library_dirs += [cudaml_lib]
+    includes += [cudaml_include]
+    CUDAML_LIB = 'cudaml'
+
+print '****', includes, library_dirs
+
 #####################
 # extension modules #
 #####################
 
-## TODO need macros for the includes since CULA call their's culablas and NVidia cublas!
-## actually these are not plug compatible at all as functions have been renamed as well as
-## include files and libraries... bah!
-
+# libraries
 BLAS = 'cublas'
 LAPACK = 'cula'
 #
 
 cunumpy = Extension('_cunumpy',
-                    define_macros = [('MAJOR_VERSION', '0'),
-                                     ('MINOR_VERSION', '1'),
-                                     ('DEBUG', '0')],
+                    define_macros = [
+                        ('CUBLAS', '1'),
+                        ('CULA', '1'),
+                        ('CUDAML', '1'),
+                        ('CULA_USE_CUDA_COMPLEX', '1'),
+                        ('MAJOR_VERSION', '1'),
+                        ('MINOR_VERSION', '3'),
+                        ('DEBUG', '0')],
                     include_dirs = includes,
-                    libraries = [BLAS],
+                    libraries = [BLAS, LAPACK, CUDAML_LIB],
                     library_dirs = library_dirs,
-                    sources = ['pycunumpy.c'])
-
-cublas = Extension('_cublas',
-                   define_macros = [('MAJOR_VERSION', '0'),
-                                    ('MINOR_VERSION', '1'),
-                                    ('DEBUG', '0')],
-                   include_dirs = includes,
-                   libraries = [BLAS],
-                   library_dirs = library_dirs,
-                   sources = ['pycublas.c'])
-
-# XXX todo cula extension...
+                    sources = ['pycunumpy.c', 'pycuarray.c'])
 
 
-setup (name = 'CuNumpy',
-       version = '0.2',
+culax = Extension('_cula',
+                  define_macros = [
+                      ('CUBLAS', '1'),
+                      ('CULA', '1'),
+                      ('CULA_USE_CUDA_COMPLEX', '1'),
+                      ('MAJOR_VERSION', '1'),
+                      ('MINOR_VERSION', '0'),
+                      ('DEBUG', '0')],
+                  include_dirs = includes,
+                  libraries = [BLAS, LAPACK],
+                  library_dirs = library_dirs,
+                  sources = ['pycula.c'])
+
+###############
+# the package #
+###############
+
+setup (name = 'cunumpy',
+       version = '1.0',
        description = 'CUDA BLAS and CULA LAPACK integration with numpy arrays',
        author = 'Simon E. Beaumont',
        author_email = 'ix@modelsciences.com',
        url = 'http://www.modelsciences.com',
-       long_description = '''APIs for CUDA and CULA libraries with support for numpy arrays. see README.''',
-       ext_modules = [cunumpy, cublas],
-       py_modules = ['cunumpy'],
+       long_description = 'APIs for CUDA and CULA libraries with support for numpy arrays. see README.',
+       ext_modules = [cunumpy, culax],
+       py_modules = ['gpu', 'cunumpy'],
+       packages = ['ml'],
+       #package_dir = {'ml': 'ml'},
        requires=['numpy(>=1.2)'])
