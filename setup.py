@@ -123,6 +123,9 @@ culax = Extension('_cula',
                   library_dirs = library_dirs,
                   sources = ['pycula.c'])
 
+###############
+# the package #
+###############
 
 setup (name = 'cunumpy',
        version = '1.0',
@@ -133,4 +136,6 @@ setup (name = 'cunumpy',
        long_description = 'APIs for CUDA and CULA libraries with support for numpy arrays. see README.',
        ext_modules = [cunumpy, culax],
        py_modules = ['gpu', 'cunumpy'],
+       packages = ['ml'],
+       #package_dir = {'ml': 'ml'},
        requires=['numpy(>=1.2)'])
