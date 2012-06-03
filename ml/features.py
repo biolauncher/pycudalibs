@@ -22,7 +22,6 @@ def centralize(A):
 
 
 
-
 def singular_values(A):
     """
     Compute singular values only by taking square roots of
@@ -34,9 +33,10 @@ def singular_values(A):
     X = centralise(A)
     return X.T.dot(X).eigensystem(pure=False)[0].sqrt()
 
-def svd(A):
+
+def svd(A, centralise=True):
     """
-    Compute the SVD decomposition of A after centralising its data
-    vectors.
+    Compute the SVD decomposition of A after [optionally] centralising its data
+    (column) vectors.
     """
-    return centralise(A).svd()
+    return centralise(A).svd() if centralise else A.svd()

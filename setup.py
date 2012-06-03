@@ -140,5 +140,4 @@ setup (name = 'cunumpy',
        ext_modules = [cunumpy, culax],
        py_modules = ['gpu', 'cunumpy'],
        packages = ['ml'],
-       #package_dir = {'ml': 'ml'},
        requires=['numpy(>=1.2)'])

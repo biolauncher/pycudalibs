@@ -80,8 +80,8 @@ def suite_double():
              ]
     return unittest.TestSuite(map(TestSVD, tests))
 
-def suite():
-    return unittest.TestSuite([suite_single()])
+
+suite = unittest.TestSuite([suite_single()])
 
 if __name__ == "__main__":
-    unittest.TextTestRunner(verbosity=2).run(suite())
+    unittest.TextTestRunner(verbosity=2).run(suite)

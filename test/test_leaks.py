@@ -1,11 +1,12 @@
+import sys
 import unittest
 import cunumpy as cn
 import numpy as np
 import math
 import test
 
-class TestLeaks (unittest.TestCase):
 
+class TestLeaks (unittest.TestCase):
     
     def setUp(self):
         self.n = 10000
@@ -17,6 +18,9 @@ class TestLeaks (unittest.TestCase):
             #b = a.sqrt()
             c = b.dot(b)
             del b, c
+            if x % 1000 == 0:
+                sys.stdout.write('.')
+                sys.stdout.flush()
         self._assert(True)
 
 def suite():
