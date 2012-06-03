@@ -86,7 +86,7 @@ if os.path.exists(cudaml):
     includes += [cudaml_include]
     CUDAML_LIB = 'cudaml'
 
-print '****', includes, library_dirs
+#print '****', includes, library_dirs
 
 #####################
 # extension modules #
