@@ -32,7 +32,9 @@ if not cuda:
 
 cuda_include = cuda + '/include'
 cuda_lib = cuda + '/lib'
-cuda_lib64 = cuda + '/lib64'
+# on OSX universal libraries available in lib...
+# TODO so we need to check for the non-existence of .../lib64 and/or the darwin platform
+cuda_lib64 = cuda + '/lib' 
 
 # CULA
 cula = os.getenv('CULA_HOME')
@@ -92,7 +94,8 @@ print '****', includes, library_dirs
 
 # libraries
 BLAS = 'cublas'
-LAPACK = 'cula'
+LAPACK = 'cula_lapack'
+CULA = 'cula_core'
 #
 
 cunumpy = Extension('_cunumpy',
@@ -105,7 +108,7 @@ cunumpy = Extension('_cunumpy',
                         ('MINOR_VERSION', '3'),
                         ('DEBUG', '0')],
                     include_dirs = includes,
-                    libraries = [BLAS, LAPACK, CUDAML_LIB],
+                    libraries = [BLAS, CULA, LAPACK, CUDAML_LIB],
                     library_dirs = library_dirs,
                     sources = ['pycunumpy.c', 'pycuarray.c'])
 
@@ -119,7 +122,7 @@ culax = Extension('_cula',
                       ('MINOR_VERSION', '0'),
                       ('DEBUG', '0')],
                   include_dirs = includes,
-                  libraries = [BLAS, LAPACK],
+                  libraries = [BLAS, CULA, LAPACK],
                   library_dirs = library_dirs,
                   sources = ['pycula.c'])
 
