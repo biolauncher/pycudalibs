@@ -1,3 +1,4 @@
+import sys
 import unittest
 import cunumpy as cn
 import numpy as np
@@ -45,8 +46,11 @@ class TestMemory(unittest.TestCase):
                 k += 1
                 n = k * 1024 * 1024
                 a = cn.array(np.random.rand(n), dtype=cn.float32)
+                print k * 4, ' ',
+                sys.stdout.flush()
         except CUDAERROR, e:
-            print e, k, 'MB',
+            print e, '@', k * 4, 'MB ',
+            sys.stdout.flush()
             #self._assert(True)
 
 def suite_single():

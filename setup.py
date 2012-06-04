@@ -32,9 +32,12 @@ if not cuda:
 
 cuda_include = cuda + '/include'
 cuda_lib = cuda + '/lib'
-# on OSX universal libraries available in lib...
-# TODO so we need to check for the non-existence of .../lib64 and/or the darwin platform
-cuda_lib64 = cuda + '/lib' 
+
+# on OSX universal (multi-architecture) libraries available in CUDA lib...
+if dsys.get_config_ver('MACHDEP') == 'darwin':
+    cuda_lib64 = cuda + '/lib'
+else:
+    cuda_lib64 = cuda + '/lib64'
 
 # CULA
 cula = os.getenv('CULA_HOME')
@@ -63,15 +66,21 @@ if not numpy_includes:
 # OK to try and build
 includes = ['.', cula_include, cuda_include] + numpy_includes
 
-# ensure CULA libraries come before CUDA - why?
-# are 64 bit libs supported and available?
+# 1. ensure CULA libraries come before CUDA as some linear algebra implementations are preferred
+# 2. are 64 bit libs supported and available?
+
 if dsys.get_config_var("SIZEOF_LONG") == 8 and os.path.exists(cuda_lib64) and os.path.exists(cula_lib64):
     library_dirs = [cula_lib64, cuda_lib64]
     print 'Building with 64 bit libraries' 
 else:
     library_dirs = [cula_lib, cuda_lib]
 
-# cudaml custom kernel integration
+
+# cudaml custom kernel library integration:
+# TODO write an install script in kernel makefile
+# to put this library somewhere sensbile on the search path (/usr/local/lib)
+# see: makefile in cudaml
+
 CUDAML_LIB = ''
 cudaml = './cudaml'
 cudaml_include = cudaml + "/include"

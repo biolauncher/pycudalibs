@@ -6,7 +6,7 @@ import gpu
 import cunumpy as cn
 
 def with_device():
-    with gpu.CUDAdevice(0) as cuda0:
+    with gpu.device(0) as cuda0:
         A = cn.ones((1024,8), dtype=cn.float32)
         print A
 
