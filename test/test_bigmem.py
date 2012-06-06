@@ -42,7 +42,7 @@ class TestMemory(unittest.TestCase):
     def test_maxmem(self):
         k = 0
         try:
-            while k < 50:
+            while k < 500:
                 k += 1
                 n = k * 1024 * 1024
                 a = cn.array(np.random.rand(n), dtype=cn.float32)
