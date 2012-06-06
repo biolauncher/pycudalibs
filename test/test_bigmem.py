@@ -18,7 +18,6 @@ class TestMemory(unittest.TestCase):
     def setUp(self):
         pass
 
-    # rewrite these to use a low level allocation of CUDA: these seem to uncover leaks in numpy?
     def test_1024x1024(self):
         a = cn.array(np.random.rand(1024,1204), dtype=cn.float32)
     
@@ -62,7 +61,6 @@ def suite_single():
         'test_8192x8192',
         #'test_8192x8192_dot',
         'test_4096x4096_dot',
-        'test_maxmem',
         'test_maxmem'
         ]
 

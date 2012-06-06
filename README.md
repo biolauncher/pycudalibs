@@ -1,5 +1,4 @@
 pycudalibs - simple but flexible interfaces to CUDA BLAS and CULA LAPACK libraries.  
-(C) Copyright 2009-2011 Simon Beaumont - Model Sciences Ltd.
 ----------------------------------------------------------------------------------
 
 We are releasing this code under LGPL3 - see copyright.txt, COPYING, COPYING.LESSER
@@ -28,19 +27,27 @@ More sophisticated Python/CUDA programmers wanting to enjoy the
 whole CUDA, Open/CL experience will also benefit from the full monty
 offered by the excellent PyCUDA package.
 
-In short you probably don't need this.
+In short you probably don't need this unless you know otherwise.
 
-Synopsis: 
-import cunumpy 
-import gpu
+* Synopsis: 
+
+  import cunumpy 
+  import gpu
  
-Tested on:
-OS X 10.5.*, CUDA 2.0-1 and Python 2.5-6
-OS X 10.6.*, CUDA 4.0   and Python 2.7.1
-UBUNTU 11.04 (kernel 2.6.38) x86_64 CUDA 4.0 EPD 7.1.1
+* Known to work on these platforms:
 
-Coming soon:
-Bespoke kernel integrations for some specialised functions.
-FFT
+  OS X 10.5.*            CUDA 2.0, 2.1 CULA R12-R14       Python 2.5-6
+  OS X 10.6.*            CUDA 4.0, 4.2 CULA R12-R14       Python 2.7
+  UBUNTU 11.04 (x86_64)  CUDA 4.0, 4.2 CULA R12-R14       EPD 7.1-2 (Python 2.7)
+
+* Extras
+There are some useful element and column vector kernels included which
+form the basis of a machine learning package CUDAML this is built to
+create a shared library libcudaml.{so,dylib} which can be linked in. I
+think it safe to assume that the future of this package is CULA and
+CUDAML based. We hope to leverage multi-device GPU linear algebra in
+CULA R14 onwards.
+
 ________
+(C) Copyright 2009-2011 Simon Beaumont - Model Sciences Ltd.
 
