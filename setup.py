@@ -34,7 +34,7 @@ cuda_include = cuda + '/include'
 cuda_lib = cuda + '/lib'
 
 # on OSX universal (multi-architecture) libraries available in CUDA lib...
-if dsys.get_config_ver('MACHDEP') == 'darwin':
+if dsys.get_config_var('MACHDEP') == 'darwin':
     cuda_lib64 = cuda + '/lib'
 else:
     cuda_lib64 = cuda + '/lib64'
