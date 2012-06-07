@@ -36,8 +36,16 @@ static inline int cula_error(culaStatus status, char* where) {
   if (status == culaNoError) {
     return 0;
 
+  } else if (status == culaArgumentError) {
+    (void) PyErr_Format(cuda_exception, "%s: argument %d has illegal value", where, culaGetErrorInfo());
+    return 1;
+
+  } else if (status == culaDataError) {
+    (void) PyErr_Format(cuda_exception, "%s: data error with code %d, see LAPACK documentation", where, culaGetErrorInfo());
+    return 1;
+
   } else {
-    PyErr_SetString(cuda_exception, culaGetStatusString(status));
+    (void) PyErr_Format(cuda_exception, "%s: %s", where, culaGetStatusString(status));
     return 1;
   }
 }

@@ -1064,87 +1064,71 @@ cula_Array_pdot(PyObject *null, PyObject *args) {
   if (PyArg_ParseTuple(args, "OO", &arg1, &arg2)) {
 
     dtype = PyArray_DescrFromType(NPY_FLOAT32);
-    Py_INCREF(dtype);
+
 
     // convert args to suitable numpy arrays
-
+    Py_INCREF(dtype);
     Py_INCREF(arg1);
     array1 = (PyArrayObject*) PyArray_FromAny(arg1, dtype, 
                                              DEVICE_ARRAY_MINDIMS, DEVICE_ARRAY_MAXDIMS, 
                                              NPY_FORTRAN | NPY_ALIGNED, NULL);
     Py_DECREF(arg1);
+    if (array1 == NULL) {
+      Py_DECREF(dtype);
+      return NULL;
+    }
 
+    Py_INCREF(dtype);
     Py_INCREF(arg2);
     array2 = (PyArrayObject*) PyArray_FromAny(arg2, dtype, 
                                              DEVICE_ARRAY_MINDIMS, DEVICE_ARRAY_MAXDIMS, 
                                              NPY_FORTRAN | NPY_ALIGNED, NULL);
     Py_DECREF(arg2);
 
-    if (array1 == NULL || array2 == NULL) {
-      // didn't manage to convert the initialisers to suitable numpy arrays: bail out
+    if (array2 == NULL) {
       Py_DECREF(dtype);
       return NULL;
+    }
 
-    } else {
+    // 1. need to check array dimensions etc.
+    npy_intp* dims1 = PyArray_DIMS(array1);
+    int ndims1 = PyArray_NDIM(array1);
 
-      // 1. need to check array dimensions etc.
-      npy_intp* dims1 = PyArray_DIMS(array1);
-      int ndims1 = PyArray_NDIM(array1);
+    npy_intp* dims2 = PyArray_DIMS(array2);
+    int ndims2 = PyArray_NDIM(array2);
+    
+    int lda = dims1[0];
+    int ldb = dims2[0];
+    int m, n, k, ldc;
+    npy_intp dimsR[2];
+    int ndimsR;
 
-      npy_intp* dims2 = PyArray_DIMS(array2);
-      int ndims2 = PyArray_NDIM(array2);
+    if (ndims1 == 1) {
 
-      int lda = dims1[0];
-      int ldb = dims2[0];
-      int m, n, k, ldc;
-      npy_intp dimsR[2];
-      int ndimsR;
+      if (ndims2 == 1) {
 
-      if (ndims1 == 1) {
-
-        if (ndims2 == 1) {
-
-          // vector-vector
-          if (lda != ldb) {
-            PyErr_SetString(PyExc_ValueError, "vectors have different dimensions");
-            Py_DECREF(array1);
-            Py_DECREF(array2);
-            Py_DECREF(dtype);
-            return NULL;
-          }
-          // pretend vector1 is a 1,k matrix and vector2 is a k,1 column matrix
-          m = 1;
-          k = dims1[0];
-          n = 1;
-          ldc = 1;
-          // return a 1 element 1-d array (don't think we can do scalar)
-          dimsR[0] = 1;
-          ndimsR = 1;
-
-        } else {
-          // vector-matrix - pretend vector1 is a 1,k matrix
-          m = 1;
-          k = dims1[0];
-          
-          if (k != dims2[0]) {
-            PyErr_SetString(PyExc_ValueError, "arrays have wrong shape for vector-matrix inner product");
-            Py_DECREF(array1);
-            Py_DECREF(array2);
-            Py_DECREF(dtype);
-            return NULL;
-          }
-          n = dims2[1];
-          ldc = 1;
-          // return a 1-d array
-          dimsR[0] = n;
-          ndimsR = 1;
+        // vector-vector
+        if (lda != ldb) {
+          PyErr_SetString(PyExc_ValueError, "vectors have different dimensions");
+          Py_DECREF(array1);
+          Py_DECREF(array2);
+          Py_DECREF(dtype);
+          return NULL;
         }
+        // pretend vector1 is a 1,k matrix and vector2 is a k,1 column matrix
+        m = 1;
+        k = dims1[0];
+        n = 1;
+        ldc = 1;
+        // return a element 0-d array 
+        dimsR[0] = 0;
+        ndimsR = 0;
 
-      } else if (ndims2 == 1) {
-        // matrix-vector vector2 is a k,1 column vector
-        m = dims1[0];
-        k = dims1[1];
-
+      } else {
+        // vector-matrix - pretend vector1 is a 1,k matrix
+        m = 1;
+        k = dims1[0];
+          
         if (k != dims2[0]) {
           PyErr_SetString(PyExc_ValueError, "arrays have wrong shape for vector-matrix inner product");
           Py_DECREF(array1);
@@ -1153,66 +1137,89 @@ cula_Array_pdot(PyObject *null, PyObject *args) {
           return NULL;
         }
         n = dims2[1];
-        ldc = m;
+        ldc = 1;
         // return a 1-d array
-        dimsR[0] = m;
+        dimsR[0] = n;
         ndimsR = 1;
-
-      } else {
-        // matrix-matrix
-        m = dims1[0];
-        k = dims1[1];
-
-        if (k != dims2[0]) {
-          PyErr_SetString(PyExc_ValueError, "arrays have wrong shape for matrix-matrix inner product");
-          Py_DECREF(array1);
-          Py_DECREF(array2);
-          Py_DECREF(dtype);
-          return NULL;
-        }
-        n = dims2[1];
-        ldc = m;
-        // return a 2-d array 
-        dimsR[0] = m;
-        dimsR[1] = n;
-        ndimsR = 2;
       }
 
+    } else if (ndims2 == 1) {
+      // matrix-vector vector2 is a k,1 column vector
+      m = dims1[0];
+      k = dims1[1];
 
-      // 2. create a numpy (fortran) array to hold the result
-      PyObject* result = PyArray_Zeros(ndimsR, dimsR, dtype, 1);
-      if (result == NULL) {
-          Py_DECREF(array1);
-          Py_DECREF(array2);
-          Py_DECREF(dtype);
-          return NULL;
-      }
-
-      // 3. get pointers to the raw data
-      culaFloat* A = (culaFloat*) PyArray_DATA(array1);
-      culaFloat* B = (culaFloat*) PyArray_DATA(array2);
-      culaFloat* C = (culaFloat*) PyArray_DATA((PyArrayObject*) result);
-
-      // 4. call the lapack routine
-      if (cula_error(pculaSgemm(&pcula, 'n','n', m, n, k, (culaFloat) 0., A, lda, B, ldb, (culaFloat) 0., C, ldc),
-                     "pdot:pculaSgemm")) {
+      if (k != dims2[0]) {
+        PyErr_SetString(PyExc_ValueError, "arrays have wrong shape for vector-matrix inner product");
         Py_DECREF(array1);
         Py_DECREF(array2);
         Py_DECREF(dtype);
-        Py_DECREF(result);
         return NULL;
       }
+      n = dims2[1];
+      ldc = m;
+      // return a 1-d array
+      dimsR[0] = m;
+      ndimsR = 1;
 
-      // 5. clean up 
+    } else {
+      // matrix-matrix
+      m = dims1[0];
+      k = dims1[1];
+
+      if (k != dims2[0]) {
+        PyErr_SetString(PyExc_ValueError, "arrays have wrong shape for matrix-matrix inner product");
+        Py_DECREF(array1);
+        Py_DECREF(array2);
+        Py_DECREF(dtype);
+        return NULL;
+      }
+      n = dims2[1];
+      ldc = m;
+      // return a 2-d array 
+      dimsR[0] = m;
+      dimsR[1] = n;
+      ndimsR = 2;
+    }
+
+      
+    Py_INCREF(dtype);
+    // 2. create a numpy (fortran) array to hold the result
+    PyObject* result = PyArray_Zeros(ndimsR, dimsR, dtype, 1);
+    if (result == NULL) {
       Py_DECREF(array1);
       Py_DECREF(array2);
       Py_DECREF(dtype);
-
-      // 5. return the array
-      return result;
+      return NULL;
     }
-  }
-  else return NULL;
+
+    // 3. get pointers to the raw data
+    culaFloat* A = (culaFloat*) PyArray_DATA(array1);
+    culaFloat* B = (culaFloat*) PyArray_DATA(array2);
+    culaFloat* C = (culaFloat*) PyArray_DATA((PyArrayObject*) result);
+
+    // 4. call the lapack routine
+    //if (cula_error(pculaSgemm(&pcula, 'n', 'n', m, n, k, (culaFloat) 1., A, lda, B, ldb, (culaFloat) 0., C, ldc),
+    //               "pdot:pculaSgemm")) {
+    // TODO substitute a known working call to this and then...  
+    if (cula_error(pculaSgemm(&pcula, 'n', 'n', m, n, k, (culaFloat) 1., A, lda, B, ldb, (culaFloat) 0., C, ldc),
+                   "pdot:pculaSgemm")) {
+
+      Py_DECREF(array1);
+      Py_DECREF(array2);
+      Py_DECREF(dtype);
+      Py_DECREF(result);
+      return NULL;
+    }
+
+    // 5. clean up 
+    Py_DECREF(array1);
+    Py_DECREF(array2);
+    Py_DECREF(dtype);
+
+    // 5. return the array
+    return PyArray_Return((PyArrayObject*) result);
+
+  } else return NULL;
 }
 #endif
 
