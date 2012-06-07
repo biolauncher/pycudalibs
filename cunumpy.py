@@ -30,9 +30,11 @@ complex128 = numpy.complex128
 array_types = [float32, float64, complex64, complex128]
 
 
+
 #
 # functions to provide numpy like factory methods for cunumpy.array objects
 #
+
 def array(*args, **keyw):
     return _cunumpy.array(numpy.array(*args, **keyw), **keyw)
 
@@ -52,7 +54,14 @@ def identity(*args, **keyw):
     return _cunumpy.array(numpy.identity(*args, **keyw), **keyw)
 
 #
-# be nice if we can switch on str/repr method to retrieve cunmpy array contents as numpy arrays
+# expose static/class methods
+#
+
+def pdot(*args, **keyw):
+    return _cunumpy.array.pdot(*args, **keyw)
+
+#
+# be nice if we could switch on str/repr method to retrieve cunmpy array contents as numpy arrays
 #
 def set_printoptions(printdata=False):
     pass

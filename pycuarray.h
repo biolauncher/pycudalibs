@@ -127,6 +127,10 @@ static PyObject* cuda_Array_eigensystem(cuda_Array*, PyObject*, PyObject*);
 static PyObject* cuda_Array_conjugateTranspose(cuda_Array*);
 #endif // CULA
 
+#if CULA >= 14
+static PyObject* cula_Array_pdot(PyObject*, PyObject*);
+#endif
+
 #ifdef CUDAML
 static PyObject* cuda_Array_sum(cuda_Array*);
 static PyObject* cuda_Array_max(cuda_Array*);

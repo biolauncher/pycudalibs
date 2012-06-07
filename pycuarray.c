@@ -1,3 +1,5 @@
+// -*- mode: C; compile-command: "CULA_HOME=/usr/local/cula CUDA_HOME=/usr/local/cuda python setup.py build"; -*-
+ 
 /*
 Copyright (C) 2009-2011 Model Sciences Ltd.
 
@@ -20,9 +22,10 @@ Author
     Simon Beaumont
 */
 
-/**
- * cuda_Array Python object implementation
- */
+
+/*******************************************
+ * cuda_Array Python object implementation 
+ *******************************************/
 
 #define CUNUMPY_MODULE
 #include <pycuarray.h>
@@ -30,6 +33,7 @@ Author
 /**
  * cuda_Array destructor
  */
+
 static void
 cuda_Array_dealloc(cuda_Array* self) {
 
@@ -40,9 +44,11 @@ cuda_Array_dealloc(cuda_Array* self) {
   self->ob_type->tp_free((PyObject*)self);
 }
 
+
 /**
  * cuda_Array __new__(cls, ...)
  */
+
 static PyObject *
 cuda_Array_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
   cuda_Array *self;
@@ -68,6 +74,7 @@ cuda_Array_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
  *  takes a numpy array or numpy style initializer
  *  and optional dtype in numpy format
  */
+
 static int
 cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
   
@@ -80,7 +87,6 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
   if (self->d_mem != NULL) { Py_DECREF(self->d_mem); }
   if (self->a_dtype != NULL) { Py_DECREF(self->a_dtype); }
 
-  //if (PyArg_ParseTuple(args, "O|O&", &object, PyArray_DescrConverter, &dtype)) {
   if (PyArg_ParseTupleAndKeywords(args, kwds, "O|O&", kwlist, &object, 
                                   PyArray_DescrConverter, &dtype)) {
 
@@ -106,6 +112,7 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
       return -1;
 
     } else {
+
       // get and check array vital statistics for allocation of cuda device memory
       npy_intp *dims = PyArray_DIMS(array);
       int ndims = PyArray_NDIM(array);
@@ -113,6 +120,7 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
       // init 
       self->a_ndims = ndims;
       self->a_dims[0] = dims[0];
+
       // make sure vectors are conventionally n*1 (column vectors) self->a_dims[1] = dims[1];
       self->a_dims[1] = ndims == 1 ? 1 : dims[1];
       self->e_size = dtype->elsize;
@@ -157,7 +165,7 @@ cuda_Array_init(cuda_Array *self, PyObject *args, PyObject *kwds) {
 static inline PyObject *
 _stringify(cuda_Array *self) {
   if (self->a_ndims == 2)
-    return PyString_FromFormat("<%s %p %s%d matrix(%d,%d) %d #%d @%p>",
+    return PyString_FromFormat("<%s %p %s%d matrix(%d,%d) %d #%lu @%p>",
                                self->ob_type->tp_name,
                                self->d_mem->d_ptr,
                                PyTypeNum_ISCOMPLEX(self->a_dtype->type_num) ? "complex" : "float",
@@ -165,18 +173,16 @@ _stringify(cuda_Array *self) {
                                self->a_dims[0],
                                self->a_dims[1],
                                self->d_mem->d_pitch,
-                               self->ob_refcnt, // XXX remove this soon!
-                               self);
+                               self->ob_refcnt, self);
   else
-    return PyString_FromFormat("<%s %p %s%d vector(%d) %d #%d @%p>",
+    return PyString_FromFormat("<%s %p %s%d vector(%d) %d #%lu @%p>",
                                self->ob_type->tp_name,
                                self->d_mem->d_ptr,
                                PyTypeNum_ISCOMPLEX(self->a_dtype->type_num) ? "complex" : "float",
                                self->e_size * 8,
                                self->a_dims[0],
                                self->d_mem->d_pitch,
-                               self->ob_refcnt,
-                               self);
+                               self->ob_refcnt, self);
 }
 
 static PyObject*
@@ -215,6 +221,7 @@ cuda_Array_getConjugateTranspose(cuda_Array *self, void *closure) {
 }
 
 #endif //CULA
+
 
 /* create a numpy host array from cuda device array */
 
@@ -260,6 +267,7 @@ static PyMemberDef cuda_Array_members[] = {
  **************/
 
 static PyMethodDef cuda_Array_methods[] = {
+
   {"toarray", (PyCFunction) cuda_Array_2numpyArray, METH_NOARGS,
    "Store CUDA device array into a host numpy array."},
   {"transpose", (PyCFunction) cuda_Array_transpose, METH_NOARGS,
@@ -278,6 +286,7 @@ static PyMethodDef cuda_Array_methods[] = {
    "Reshape the dimensions of a CUDA device array."},
 
 #ifdef CULA
+
   {"svd", (PyCFunction) cuda_Array_svd, METH_VARARGS | METH_KEYWORDS,
    "Singular value decomposion of CUDA array - returns tuple of (U S VT) device arrays."},
   {"eigensystem", (PyCFunction) cuda_Array_eigensystem, METH_VARARGS | METH_KEYWORDS,
@@ -286,6 +295,13 @@ static PyMethodDef cuda_Array_methods[] = {
    "Conjugate transpose of a matrix"},
 
 #endif
+
+#if CULA >= 14
+
+  {"pdot", (PyCFunction) cula_Array_pdot, METH_VARARGS | METH_STATIC,
+   "Multi-gpu inner product of vectors and matrices N.B. arguments must be numpy (host) arrays"},
+
+#endif // CULA>=14
 
 #ifdef CUDAML
  
@@ -422,9 +438,11 @@ static PyTypeObject cuda_ArrayType = {
     cuda_Array_new,                           /* tp_new */
 };
 
+
 /**
  * virtual transpose  
  */
+
 static PyObject*
 cuda_Array_transpose(cuda_Array *self, PyObject *args) {
   // toggle the transpose flag for matrices only since we keep vectors in column form
@@ -460,6 +478,7 @@ cuda_Array_transpose(cuda_Array *self, PyObject *args) {
  * this inccurs device <-> host memory transfers.
  * this method is overloaded for vectors and matrices with 64bit complex and float32 payloads
  */
+
 static PyObject*
 cuda_Array_dot(cuda_Array *self, PyObject *args) {
   cuda_Array *other;
@@ -614,9 +633,11 @@ cuda_Array_dot(cuda_Array *self, PyObject *args) {
   else return NULL;
 }
 
+
 /**
  * scalar multiplication 
  */
+
 static PyObject*
 cuda_Array_scale(cuda_Array *self, PyObject *args) {
   PyObject *scalar;
@@ -674,10 +695,12 @@ cuda_Array_scale(cuda_Array *self, PyObject *args) {
   } else return NULL;
 }
 
+
 /**
  * 2 norm euclidean L2 for vectors or Frobenius or Hilbert-Schmidt for matrices.
  * trickery is to treat matrices as vectors to achieve entrywise norms 
  */
+
 static PyObject*
 cuda_Array_2norm(cuda_Array *self) {
 
@@ -695,9 +718,11 @@ cuda_Array_2norm(cuda_Array *self) {
   }
 }
 
+
 /**
  * absolute sum of an array - not the L1 norm in complex case
  */  
+
 static PyObject*
 cuda_Array_asum(cuda_Array *self) {
 
@@ -715,9 +740,11 @@ cuda_Array_asum(cuda_Array *self) {
   }
 }
 
+
 /**
  * reshape - clone and meddle with the descriptor
  */
+
 static PyObject*
 cuda_Array_reshape(cuda_Array *self, PyObject *args) {
   //PyObject* tuple;
@@ -757,11 +784,13 @@ cuda_Array_reshape(cuda_Array *self, PyObject *args) {
 /**
  * a method to create a copy of an array in cuda space
  */
+
 static PyObject* 
 cuda_Array_copy(cuda_Array *self) {
   cuda_Array *copy = copy_array(self);
   return (copy == NULL) ? NULL : Py_BuildValue("N", copy);
 }
+
 
 /*************************
  * LAPACK - CULA methods 
@@ -829,10 +858,12 @@ cuda_Array_svd(cuda_Array* self, PyObject* args, PyObject* keywds) {
   } else return NULL; // argument error
 }
 
+
 /** 
  *  eigensystem  - values, and/or left right vectors 
  *    most of the work here is dealing with the awful LAPACK api.
  */
+
 static PyObject*
 cuda_Array_eigensystem(cuda_Array* self, PyObject* args, PyObject* keywds) {
 
@@ -977,7 +1008,11 @@ cuda_Array_eigensystem(cuda_Array* self, PyObject* args, PyObject* keywds) {
   } else return NULL;
 }
 
-/* conjugate transpose */
+
+/* 
+** conjugate transpose 
+*/
+
 static PyObject*
 cuda_Array_conjugateTranspose(cuda_Array* self) {
 
@@ -1003,11 +1038,188 @@ cuda_Array_conjugateTranspose(cuda_Array* self) {
 }
 #endif
 
-#ifdef CUDAML
-/**********************************
- * CULAML custom ml kernel library 
- **********************************/
 
+#if CULA >= 14
+/*
+** experimental (alpha) CULA multi-gpu dot product
+** 
+** N.B. multi-gpu array methods need host memory for arrays so this is a static method in the class
+** that takes two regular numpy arrays or suitable array initialisers (so this is really a numpy extension)
+*/
+
+static PyObject*
+cula_Array_pdot(PyObject *null, PyObject *args) {
+
+  PyObject* arg1;
+  PyObject* arg2;
+
+  PyArrayObject* array1;
+  PyArrayObject* array2;
+  PyArray_Descr* dtype;
+
+  pculaConfig pcula;
+  if (cula_error(pculaConfigInit(&pcula), "cula_Array_dot:pCulaConfigInit")) return NULL;
+
+
+  if (PyArg_ParseTuple(args, "OO", &arg1, &arg2)) {
+
+    dtype = PyArray_DescrFromType(NPY_FLOAT32);
+    Py_INCREF(dtype);
+
+    // convert args to suitable numpy arrays
+
+    Py_INCREF(arg1);
+    array1 = (PyArrayObject*) PyArray_FromAny(arg1, dtype, 
+                                             DEVICE_ARRAY_MINDIMS, DEVICE_ARRAY_MAXDIMS, 
+                                             NPY_FORTRAN | NPY_ALIGNED, NULL);
+    Py_DECREF(arg1);
+
+    Py_INCREF(arg2);
+    array2 = (PyArrayObject*) PyArray_FromAny(arg2, dtype, 
+                                             DEVICE_ARRAY_MINDIMS, DEVICE_ARRAY_MAXDIMS, 
+                                             NPY_FORTRAN | NPY_ALIGNED, NULL);
+    Py_DECREF(arg2);
+
+    if (array1 == NULL || array2 == NULL) {
+      // didn't manage to convert the initialisers to suitable numpy arrays: bail out
+      Py_DECREF(dtype);
+      return NULL;
+
+    } else {
+
+      // 1. need to check array dimensions etc.
+      npy_intp* dims1 = PyArray_DIMS(array1);
+      int ndims1 = PyArray_NDIM(array1);
+
+      npy_intp* dims2 = PyArray_DIMS(array2);
+      int ndims2 = PyArray_NDIM(array2);
+
+      int lda = dims1[0];
+      int ldb = dims2[0];
+      int m, n, k, ldc;
+      npy_intp dimsR[2];
+      int ndimsR;
+
+      if (ndims1 == 1) {
+
+        if (ndims2 == 1) {
+
+          // vector-vector
+          if (lda != ldb) {
+            PyErr_SetString(PyExc_ValueError, "vectors have different dimensions");
+            Py_DECREF(array1);
+            Py_DECREF(array2);
+            Py_DECREF(dtype);
+            return NULL;
+          }
+          // pretend vector1 is a 1,k matrix and vector2 is a k,1 column matrix
+          m = 1;
+          k = dims1[0];
+          n = 1;
+          ldc = 1;
+          // return a 1 element 1-d array (don't think we can do scalar)
+          dimsR[0] = 1;
+          ndimsR = 1;
+
+        } else {
+          // vector-matrix - pretend vector1 is a 1,k matrix
+          m = 1;
+          k = dims1[0];
+          
+          if (k != dims2[0]) {
+            PyErr_SetString(PyExc_ValueError, "arrays have wrong shape for vector-matrix inner product");
+            Py_DECREF(array1);
+            Py_DECREF(array2);
+            Py_DECREF(dtype);
+            return NULL;
+          }
+          n = dims2[1];
+          ldc = 1;
+          // return a 1-d array
+          dimsR[0] = n;
+          ndimsR = 1;
+        }
+
+      } else if (ndims2 == 1) {
+        // matrix-vector vector2 is a k,1 column vector
+        m = dims1[0];
+        k = dims1[1];
+
+        if (k != dims2[0]) {
+          PyErr_SetString(PyExc_ValueError, "arrays have wrong shape for vector-matrix inner product");
+          Py_DECREF(array1);
+          Py_DECREF(array2);
+          Py_DECREF(dtype);
+          return NULL;
+        }
+        n = dims2[1];
+        ldc = m;
+        // return a 1-d array
+        dimsR[0] = m;
+        ndimsR = 1;
+
+      } else {
+        // matrix-matrix
+        m = dims1[0];
+        k = dims1[1];
+
+        if (k != dims2[0]) {
+          PyErr_SetString(PyExc_ValueError, "arrays have wrong shape for matrix-matrix inner product");
+          Py_DECREF(array1);
+          Py_DECREF(array2);
+          Py_DECREF(dtype);
+          return NULL;
+        }
+        n = dims2[1];
+        ldc = m;
+        // return a 2-d array 
+        dimsR[0] = m;
+        dimsR[1] = n;
+        ndimsR = 2;
+      }
+
+
+      // 2. create a numpy (fortran) array to hold the result
+      PyObject* result = PyArray_Zeros(ndimsR, dimsR, dtype, 1);
+      if (result == NULL) {
+          Py_DECREF(array1);
+          Py_DECREF(array2);
+          Py_DECREF(dtype);
+          return NULL;
+      }
+
+      // 3. get pointers to the raw data
+      culaFloat* A = (culaFloat*) PyArray_DATA(array1);
+      culaFloat* B = (culaFloat*) PyArray_DATA(array2);
+      culaFloat* C = (culaFloat*) PyArray_DATA((PyArrayObject*) result);
+
+      // 4. call the lapack routine
+      if (cula_error(pculaSgemm(&pcula, 'n','n', m, n, k, (culaFloat) 0., A, lda, B, ldb, (culaFloat) 0., C, ldc),
+                     "pdot:pculaSgemm")) {
+        Py_DECREF(array1);
+        Py_DECREF(array2);
+        Py_DECREF(dtype);
+        Py_DECREF(result);
+        return NULL;
+      }
+
+      // 5. clean up 
+      Py_DECREF(array1);
+      Py_DECREF(array2);
+      Py_DECREF(dtype);
+
+      // 5. return the array
+      return result;
+    }
+  }
+  else return NULL;
+}
+#endif
+
+#ifdef CUDAML
+/*********************************************************************************
+ * CULAML custom ml kernel library - mainly element-wise and column-wise functions
+ *********************************************************************************/
 
 static PyObject*
 cuda_Array_sum(cuda_Array* self) {
@@ -1025,6 +1237,7 @@ cuda_Array_sum(cuda_Array* self) {
     return Py_BuildValue("f", sum);
 }
 
+
 static PyObject*
 cuda_Array_max(cuda_Array* self) {
 
@@ -1039,6 +1252,7 @@ cuda_Array_max(cuda_Array* self) {
   else
     return Py_BuildValue("f", sum);
 }
+
 
 static PyObject*
 cuda_Array_min(cuda_Array* self) {
@@ -1056,6 +1270,7 @@ cuda_Array_min(cuda_Array* self) {
     return Py_BuildValue("f", sum);
 }
 
+
 static PyObject*
 cuda_Array_product(cuda_Array* self) {
 
@@ -1070,6 +1285,7 @@ cuda_Array_product(cuda_Array* self) {
   else
     return Py_BuildValue("f", sum);
 }
+
 
 static PyObject*
 cuda_Array_csum(cuda_Array* self) {
@@ -1091,6 +1307,7 @@ cuda_Array_csum(cuda_Array* self) {
     return Py_BuildValue("N", colv);
 }
 
+
 static PyObject*
 cuda_Array_cmax(cuda_Array* self) {
 
@@ -1110,6 +1327,7 @@ cuda_Array_cmax(cuda_Array* self) {
   else
     return Py_BuildValue("N", colv);
 }
+
 
 static PyObject*
 cuda_Array_cmin(cuda_Array* self) {
@@ -1131,6 +1349,7 @@ cuda_Array_cmin(cuda_Array* self) {
     return Py_BuildValue("N", colv);
 }
 
+
 static PyObject*
 cuda_Array_cproduct(cuda_Array* self) {
 
@@ -1150,6 +1369,7 @@ cuda_Array_cproduct(cuda_Array* self) {
   else
     return Py_BuildValue("N", colv);
 }
+
 
 static PyObject*
 cuda_Array_esum(cuda_Array *self, PyObject *args) {
@@ -1238,6 +1458,7 @@ cuda_Array_esum(cuda_Array *self, PyObject *args) {
   } else return NULL;
 }
 
+
 static PyObject*
 cuda_Array_emul(cuda_Array *self, PyObject *args) {
   PyObject *arg;
@@ -1322,6 +1543,7 @@ cuda_Array_emul(cuda_Array *self, PyObject *args) {
     
   } else return NULL;
 }
+
 
 static PyObject*
 cuda_Array_epow(cuda_Array *self, PyObject *args) {
@@ -1565,11 +1787,13 @@ copy_array(cuda_Array* self) {
   return new;
 }
 
+
 /*
  * this just copies the device memory in an array 
- *  handy for temporary buffers when LAPACK calls are destructive and we wish
+ *  handy for temporary buffers when LAPACK calls are side affecting and we wish
  *  to preserve purity.
  */
+
 static inline void*
 copy_devmem(cuda_Array* self) {
 
@@ -1582,6 +1806,7 @@ copy_devmem(cuda_Array* self) {
                   
   else return dst;  
 }
+
 
 /*
  * 2d array copies with pitched mem
@@ -1634,8 +1859,6 @@ dtype(int typenum) {
  * Module definitions 
  *********************/
 
-// XXX stuck this in here to see if fixes bug - which it does but why?
-
 #ifndef PyMODINIT_FUNC	/* declarations for DLL import/export */
 #define PyMODINIT_FUNC void
 #endif
@@ -1670,3 +1893,5 @@ init_cunumpy(void) {
       import_array(); // import numpy module
     }
 }
+
+// END pycuarray.c //

@@ -104,20 +104,21 @@ if os.path.exists(cudaml):
 # libraries
 BLAS = 'cublas'
 LAPACK = 'cula_lapack'
+SCA_LAPACK = 'cula_scalapack'
 CULA = 'cula_core'
 #
 
 cunumpy = Extension('_cunumpy',
                     define_macros = [
                         ('CUBLAS', '1'),
-                        ('CULA', '1'),
+                        ('CULA', '14'),
                         ('CUDAML', '1'),
                         ('CULA_USE_CUDA_COMPLEX', '1'),
                         ('MAJOR_VERSION', '1'),
                         ('MINOR_VERSION', '3'),
                         ('DEBUG', '0')],
                     include_dirs = includes,
-                    libraries = [BLAS, CULA, LAPACK, CUDAML_LIB],
+                    libraries = [BLAS, CULA, LAPACK, CUDAML_LIB, SCA_LAPACK],
                     library_dirs = library_dirs,
                     sources = ['pycunumpy.c', 'pycuarray.c'])
 
@@ -125,7 +126,7 @@ cunumpy = Extension('_cunumpy',
 culax = Extension('_cula',
                   define_macros = [
                       ('CUBLAS', '1'),
-                      ('CULA', '1'),
+                      ('CULA', '14'),
                       ('CULA_USE_CUDA_COMPLEX', '1'),
                       ('MAJOR_VERSION', '1'),
                       ('MINOR_VERSION', '0'),

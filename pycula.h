@@ -22,6 +22,9 @@ This file is part of pycudalibs
 #define _PYCULA_H 1
 
 #include <cula.h>
+#if CULA >= 14
+#include <cula_scalapack.h>
+#endif
 #include <pycunumpy.h>
 #include <pylibs.h>
 
