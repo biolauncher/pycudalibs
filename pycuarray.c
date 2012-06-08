@@ -1100,6 +1100,8 @@ cula_Array_pdot(PyObject *null, PyObject *args) {
     int lda = dims1[0];
     int ldb = dims2[0];
     int m, n, k, ldc;
+    char opA = 'N', opB = 'N';
+
     npy_intp dimsR[2];
     int ndimsR;
 
@@ -1107,25 +1109,29 @@ cula_Array_pdot(PyObject *null, PyObject *args) {
 
       if (ndims2 == 1) {
 
-        // vector-vector
-        if (lda != ldb) {
+        // vector-vector 
+        if (dims1[0] != dims2[0]) {
           PyErr_SetString(PyExc_ValueError, "vectors have different dimensions");
           Py_DECREF(array1);
           Py_DECREF(array2);
           Py_DECREF(dtype);
           return NULL;
         }
-        // pretend vector1 is a 1,k matrix and vector2 is a k,1 column matrix
+
+        // pretend vector1 is a 1,k matrix or row vector and vector2 is a k,1 matrix or column vector
+        opA = 'T';
         m = 1;
         k = dims1[0];
         n = 1;
-        ldc = 1;
+        ldc = m;
+
         // return a element 0-d array 
         dimsR[0] = 0;
         ndimsR = 0;
 
       } else {
-        // vector-matrix - pretend vector1 is a 1,k matrix
+        // vector-matrix - pretend vector1 is a 1,k matrix or row vector
+        opA = 'T';
         m = 1;
         k = dims1[0];
           
@@ -1137,7 +1143,7 @@ cula_Array_pdot(PyObject *null, PyObject *args) {
           return NULL;
         }
         n = dims2[1];
-        ldc = 1;
+        ldc = m;
         // return a 1-d array
         dimsR[0] = n;
         ndimsR = 1;
@@ -1149,7 +1155,7 @@ cula_Array_pdot(PyObject *null, PyObject *args) {
       k = dims1[1];
 
       if (k != dims2[0]) {
-        PyErr_SetString(PyExc_ValueError, "arrays have wrong shape for vector-matrix inner product");
+        PyErr_SetString(PyExc_ValueError, "arrays have wrong shape for matrix-vector inner product");
         Py_DECREF(array1);
         Py_DECREF(array2);
         Py_DECREF(dtype);
@@ -1198,10 +1204,8 @@ cula_Array_pdot(PyObject *null, PyObject *args) {
     culaFloat* C = (culaFloat*) PyArray_DATA((PyArrayObject*) result);
 
     // 4. call the lapack routine
-    //if (cula_error(pculaSgemm(&pcula, 'n', 'n', m, n, k, (culaFloat) 1., A, lda, B, ldb, (culaFloat) 0., C, ldc),
-    //               "pdot:pculaSgemm")) {
-    // TODO substitute a known working call to this and then...  
-    if (cula_error(pculaSgemm(&pcula, 'n', 'n', m, n, k, (culaFloat) 1., A, lda, B, ldb, (culaFloat) 0., C, ldc),
+    // printf("m=%d n=%d k=%d lda=%d ldb=%d ldc=%d\n", m, n, k, lda, ldb, ldc);
+    if (cula_error(pculaSgemm(&pcula, opA, opB, m, n, k, (culaFloat) 1., A, lda, B, ldb, (culaFloat) 0., C, ldc),
                    "pdot:pculaSgemm")) {
 
       Py_DECREF(array1);

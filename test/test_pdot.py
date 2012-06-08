@@ -24,8 +24,8 @@ class TestMultiGPUDotProduct(unittest.TestCase):
         na = np.array(self.real_veca, dtype=np.float32)
         nb = np.array(self.real_vecb, dtype=np.float32)
         nc = np.dot(na,nb)
-        nd = cn.Array.pdot(na, nb)
-        self.assert_(test.scalars_equal(nc, nd[0], epsilon=0.05))
+        nd = cn.pdot(na, nb)
+        self.assert_(test.scalars_equal(nc, nd, epsilon=0.05))
 
 
     def test_complex_single_vector_vector_dot(self):
@@ -44,7 +44,7 @@ class TestMultiGPUDotProduct(unittest.TestCase):
         na = np.array(self.real_veca, dtype=np.float32)
         nb = np.array(self.real_matb, dtype=np.float32)
         nc = np.dot(na,nb)
-        nd = cn.Array.pdot(na, nb)
+        nd = cn.pdot(na, nb)
         self.assert_(test.arrays_equal(nd, nc, epsilon=0.05))
 
 
@@ -59,7 +59,7 @@ class TestMultiGPUDotProduct(unittest.TestCase):
         na = np.array(self.real_mata, dtype=np.float32)
         nb = np.array(self.real_vecb, dtype=np.float32)
         nc = np.dot(na,nb)
-        nd = cn.Array.pdot(na, nb)
+        nd = cn.pdot(na, nb)
         self.assert_(test.arrays_equal(nd, nc, epsilon=0.05))
 
 
@@ -77,7 +77,7 @@ class TestMultiGPUDotProduct(unittest.TestCase):
         na = np.array(self.real_mata, dtype=np.float32)
         nb = np.array(self.real_matb, dtype=np.float32)
         nc = np.dot(na,nb)
-        nd = cn.Array.pdot(na,nb)
+        nd = cn.pdot(na,nb)
         self.assert_(test.arrays_equal(nd, nc, epsilon=0.05))
 
 
@@ -95,7 +95,7 @@ def suite_single():
     suite = unittest.TestSuite()
     tests = ['test_real_single_vector_vector_dot',
              #'test_complex_single_vector_vector_dot',
-             # not in CUBLAS 'test_real_single_vector_matrix_dot',
+             'test_real_single_vector_matrix_dot',
              # not in CUBLAS 'test_complex_single_vector_matrix_dot',
              'test_real_single_matrix_vector_dot',
              # not in CUBLAS 'test_complex_single_matrix_vector_dot',

@@ -149,5 +149,5 @@ setup (name = 'cunumpy',
        long_description = 'APIs for CUDA and CULA libraries with support for numpy arrays. see README.',
        ext_modules = [cunumpy, culax],
        py_modules = ['gpu', 'cunumpy'],
-       packages = ['ml'],
+       #packages = ['ml'],
        requires=['numpy(>=1.2)'])
