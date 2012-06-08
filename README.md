@@ -31,14 +31,14 @@ In short you probably don't need this unless you know otherwise.
 
 * Synopsis: 
 
-  import cunumpy 
-  import gpu
+    import cunumpy 
+    import gpu
  
 * Known to work on these platforms:
 
-  OS X 10.5.*            CUDA 2.0, 2.1 CULA R12-R14       Python 2.5-6
-  OS X 10.6.*            CUDA 4.0, 4.2 CULA R12-R14       Python 2.7
-  UBUNTU 11.04 (x86_64)  CUDA 4.0, 4.2 CULA R12-R14       EPD 7.1-2 (Python 2.7)
+    OS X 10.5.*            CUDA 2.0, 2.1 CULA R12-R14       Python 2.5-6
+    OS X 10.6.*            CUDA 4.0, 4.2 CULA R12-R14       Python 2.7
+    UBUNTU 11.04 (x86_64)  CUDA 4.0, 4.2 CULA R12-R14       EPD 7.1-2 (Python 2.7)
 
 * Extras
 There are some useful element and column vector kernels included which
@@ -49,5 +49,5 @@ CUDAML based. We hope to leverage multi-device GPU linear algebra in
 CULA R14 onwards.
 
 ________
-(C) Copyright 2009-2011 Simon Beaumont - Model Sciences Ltd.
+Copyright (C) 2009-2012 Simon Beaumont - Model Sciences Ltd.
 
