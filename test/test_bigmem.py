@@ -1,6 +1,7 @@
 import sys
 import unittest
 import cunumpy as cn
+import gpu
 import numpy as np
 import math
 from _cunumpy import CUDAERROR
