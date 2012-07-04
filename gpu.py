@@ -35,6 +35,10 @@ class device (object):
     def device_count():
         return _cula.device_count()
 
+    @staticmethod
+    def meminfo():
+	return _cula.meminfo()
+
     def close(self):
         _cula.close()
 

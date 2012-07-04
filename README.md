@@ -34,10 +34,10 @@ In short you probably don't need this unless you know otherwise.
     import cunumpy 
     import gpu
  
-* Known to work on these platforms:
+* Known to have worked on these platforms:
 
-    OS X 10.5.*            CUDA 2.0, 2.1 CULA R12-R14       Python 2.5-6
-    OS X 10.6.*            CUDA 4.0, 4.2 CULA R12-R14       Python 2.7
+    OS X 10.5.*      (i386)      CUDA 2.0, 2.1 CULA R12-R14       Python 2.5-6
+    OS X 10.6.*      (x86_64)  CUDA 4.0, 4.2 CULA R12-R14       Python 2.7
     UBUNTU 11.04 (x86_64)  CUDA 4.0, 4.2 CULA R12-R14       EPD 7.1-2 (Python 2.7)
 
 * Extras

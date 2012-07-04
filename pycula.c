@@ -17,17 +17,35 @@ This file is part of pycudalibs
     License along with pycudalibs.  If not, see <http://www.gnu.org/licenses/>.  
 */
 
- 
+
+// TODO these are exposed in gpu.py so it might be an idea to rename this module to CUDA
+
 /**
  * Python integration to CULA framework routines.
  *  defines module: _cula 
  */
 
+#include <pycuda.h>
 #include <pycula.h>
+
+/**
+ * get memory config from CUDA runtime for current device
+ */
+
+static PyObject* getMemoryInfo(PyObject* self) {
+    size_t free;
+    size_t total;
+
+    if (cuda_error2(cudaMemGetInfo(&free, &total), "cudaMemGetInfo"))
+        return NULL;
+    else
+        return Py_BuildValue("(ii)", free, total);
+}
 
 /**
  * get number of CUDA devices
  */
+
 static PyObject* getDeviceCount(PyObject* self) {
   int n_dev;
 
@@ -41,6 +59,7 @@ static PyObject* getDeviceCount(PyObject* self) {
  * select a cuda device to bind to this thread - must be called
  * before init.
  */
+
 static PyObject* selectDevice(PyObject* self, PyObject* args) {
   int devno;
 
@@ -90,6 +109,9 @@ static PyMethodDef _cula_methods[] = {
 
   {"reset", (PyCFunction) reset, METH_NOARGS,
    "Reset the CUDA device attached to the current thread."},
+    
+  {"meminfo", (PyCFunction) getMemoryInfo, METH_NOARGS,
+    "Get memory stats for the CUDA device attached to the current thread."},
 
   {"close", (PyCFunction) reset, METH_NOARGS,
    "Reset the CUDA device attached to the current thread."},
